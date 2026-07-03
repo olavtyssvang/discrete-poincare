@@ -5,11 +5,11 @@ import bogovskii
 import csv, time
 
 
-MIN_N_RUNS = 50
-MIN_RUNTIME_S = 10
+MIN_N_RUNS = 1
+MIN_RUNTIME_S = 0
 
-experiment_degrees = [2, 4, 6, 8]
-experiment_n_refinements = 2
+experiment_degrees = [2, 4]
+experiment_n_refinements = 1
 
 
 base_mesh = UnitTriangleMesh(3)
@@ -44,11 +44,14 @@ def runtime_naive(mesh, degree):
     time_start = time.time()
     
     n_runs = 0
-    while time.time() - time_start < MIN_RUNTIME_S:
+    while True:
         for i in range(MIN_N_RUNS):
             L = inner(u, grad(p))*dx
             solve(a==L, Pu_data, nullspace=nullspace)
+        
         n_runs += MIN_N_RUNS
+        if time.time() - time_start > MIN_RUNTIME_S:
+            break
 
     time_elapsed = time.time() - time_start
 
@@ -69,11 +72,11 @@ def runtime_local(mesh, degree):
     u = Function(funspace_Ned).interpolate(grad(f))
 
 
-    PIu_data = Function(funspace_CG1)
-    PIu = TrialFunction(funspace_CG1)
-    p = TestFunction(funspace_CG1)
+    PIu = Function(funspace_CG1)
+    p0 = TrialFunction(funspace_CG1)
+    p1 = TestFunction(funspace_CG1)
 
-    a = inner(grad(PIu), grad(p))*dx
+    a = inner(grad(p0), grad(p1))*dx
     nullspace = VectorSpaceBasis(constant=True, comm=COMM_WORLD)
 
 
@@ -86,10 +89,10 @@ def runtime_local(mesh, degree):
     domain = f"{{[i,j]: 0 <= i < {ndof_CG} and 0 <= j < {ndof_Ned}}}"
     instructions = f"""
     for i
-    PMu[i] = 0.0
-    for j
-        PMu[i] = PMu[i] + B[i*{ndof_Ned} + j] * Mu[j]
-    end
+        a[i] = 0.0
+        for j
+            a[i] = a[i] + T[i*{ndof_Ned} + j] * b[j]
+        end
     end
     """
 
@@ -97,24 +100,26 @@ def runtime_local(mesh, degree):
     time_start = time.time()
     
     n_runs = 0
-    while time.time() - time_start < MIN_RUNTIME_S:
+    while True:
         for i in range(MIN_N_RUNS):   
             Iu = Function(funspace_Ned1).interpolate(u)
-            L = inner(Iu, grad(p))*dx
-            solve(a==L, PIu_data, nullspace=nullspace)
+            L = inner(Iu, grad(p1))*dx
+            solve(a==L, PIu, nullspace=nullspace)
 
             Mu = Function(funspace_Ned).interpolate(u - Iu)
             par_loop(
                 (domain, instructions),
                 dx,
-                {"Mu": (Mu, READ), "PMu": (PMu, WRITE), "B": (B, READ)}
+                {"T": (B, READ), "b": (Mu, READ), "a": (PMu, WRITE)}
             )
 
         n_runs += MIN_N_RUNS
+        if time.time() - time_start > MIN_RUNTIME_S:
+            break
 
     time_elapsed = time.time() - time_start
     
-    Pu = Function(funspace_CG).interpolate(PIu_data + PMu)
+    Pu = Function(funspace_CG).interpolate(PIu + PMu)
     assert norm(grad(Pu) - u, "L2") < 1e-10
 
     return time_elapsed / n_runs
