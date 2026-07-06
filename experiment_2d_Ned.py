@@ -1,15 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from firedrake import *
-import bogovskii
 import csv, time
+import gc
+import bogovskii
 
+MIN_N_SOLVES = 10
+MIN_RUNTIME_S = 1
 
-MIN_N_RUNS = 1
-MIN_RUNTIME_S = 0
-
-experiment_degrees = [2, 4]
-experiment_n_refinements = 1
+experiment_degrees = [2, 3, 4]
+experiment_n_refinements = 5
 
 
 base_mesh = UnitTriangleMesh(3)
@@ -33,31 +33,31 @@ def runtime_naive(mesh, degree):
     u = Function(funspace_Ned).interpolate(grad(f))
 
 
-    Pu_data = Function(funspace_CG)
-    Pu = TrialFunction(funspace_CG)
-    p = TestFunction(funspace_CG)
+    Pu = Function(funspace_CG)
+    p0 = TrialFunction(funspace_CG)
+    p1 = TestFunction(funspace_CG)
 
-    a = inner(grad(Pu), grad(p))*dx
+    a = inner(grad(p0), grad(p1))*dx
     nullspace = VectorSpaceBasis(constant=True, comm=COMM_WORLD)
 
 
     time_start = time.time()
     
-    n_runs = 0
+    n_solves = 0
     while True:
-        for i in range(MIN_N_RUNS):
-            L = inner(u, grad(p))*dx
-            solve(a==L, Pu_data, nullspace=nullspace)
+        for i in range(MIN_N_SOLVES):
+            L = inner(u, grad(p1))*dx
+            solve(a==L, Pu, nullspace=nullspace)
         
-        n_runs += MIN_N_RUNS
+        n_solves += MIN_N_SOLVES
         if time.time() - time_start > MIN_RUNTIME_S:
             break
 
     time_elapsed = time.time() - time_start
 
-    assert norm(grad(Pu_data) - u, "L2") < 1e-10
+    assert norm(grad(Pu) - u, "L2") < 1e-10
 
-    return time_elapsed / n_runs
+    return time_elapsed, n_solves
 
 
 def runtime_local(mesh, degree):
@@ -99,9 +99,9 @@ def runtime_local(mesh, degree):
 
     time_start = time.time()
     
-    n_runs = 0
+    n_solves = 0
     while True:
-        for i in range(MIN_N_RUNS):   
+        for i in range(MIN_N_SOLVES):   
             Iu = Function(funspace_Ned1).interpolate(u)
             L = inner(Iu, grad(p1))*dx
             solve(a==L, PIu, nullspace=nullspace)
@@ -113,7 +113,7 @@ def runtime_local(mesh, degree):
                 {"T": (B, READ), "b": (Mu, READ), "a": (PMu, WRITE)}
             )
 
-        n_runs += MIN_N_RUNS
+        n_solves += MIN_N_SOLVES
         if time.time() - time_start > MIN_RUNTIME_S:
             break
 
@@ -122,39 +122,51 @@ def runtime_local(mesh, degree):
     Pu = Function(funspace_CG).interpolate(PIu + PMu)
     assert norm(grad(Pu) - u, "L2") < 1e-10
 
-    return time_elapsed / n_runs
+    return time_elapsed, n_solves
 
 
-data_naive = [experiment_degrees]
-data_local = [experiment_degrees]
+data_naive = []
+data_local = []
+
+data_fields = ["mesh_id", "mesh_size", "polynomial_degree", "number_of_dof", "time_elapsed", "number_of_solves"]
 
 time_start = time.time()
 for mesh_level, mesh in enumerate(MeshHierarchy(base_mesh, experiment_n_refinements)):
 
     print(f"====   Mesh level{mesh_level:3}  ====")
 
-    data_naive.append([])
-    data_local.append([])
+    funspace_DG0 = FunctionSpace(mesh, "DG", 0)
+    mesh_size = Function(funspace_DG0).interpolate(CellDiameter(mesh)).dat.data_ro.max()
+
+    data_naive.append({"mesh_id": mesh_level, "mesh_size": mesh_size})
+    data_local.append({"mesh_id": mesh_level, "mesh_size": mesh_size})
 
     for degree in experiment_degrees:
         print(f"{int(time.time() - time_start):4}s elapsed;  degree{degree:3}", end="")
 
-        rt_naive = runtime_naive(mesh, degree)
-        print(f";  naive{rt_naive:8.4f}", end="")
+        funspace_Ned = FunctionSpace(mesh, "N1curl", degree)
+        data_naive[-1]["polynomial_degree"] = \
+        data_local[-1]["polynomial_degree"] = degree
+        data_naive[-1]["number_of_dof"] = \
+        data_local[-1]["number_of_dof"] = funspace_Ned.dim()
 
-        rt_local = runtime_local(mesh, degree)
-        print(f";  local{rt_local:8.4f}")
+        gc.collect()
+        data_naive[-1]["time_elapsed"], data_naive[-1]["number_of_solves"] = runtime_naive(mesh, degree)
+        print(f";  naive{data_naive[-1]["time_elapsed"] / data_naive[-1]["number_of_solves"]:8.4f}", end="")
 
-        data_naive[-1].append(rt_naive)
-        data_local[-1].append(rt_local)
+        gc.collect()
+        data_local[-1]["time_elapsed"], data_local[-1]["number_of_solves"] = runtime_local(mesh, degree)
+        print(f";  local{data_local[-1]["time_elapsed"] / data_local[-1]["number_of_solves"]:8.4f}")
 
     print()
 
 
-with open("output/discrete-poincare/Ned-naive.csv", "w+", newline="") as csvfile:
-    writer = csv.writer(csvfile)
+with open("output/discrete-poincare/Ned-naive.csv", "w", newline="") as csvfile:
+    writer = csv.DictWriter(csvfile, fieldnames=data_fields)
+    writer.writeheader()
     writer.writerows(data_naive)
 
-with open("output/discrete-poincare/Ned-local.csv", "w+", newline="") as csvfile:
-    writer = csv.writer(csvfile)
+with open("output/discrete-poincare/Ned-local.csv", "w", newline="") as csvfile:
+    writer = csv.DictWriter(csvfile, fieldnames=data_fields)
+    writer.writeheader()
     writer.writerows(data_local)

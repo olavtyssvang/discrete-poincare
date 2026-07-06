@@ -3,13 +3,13 @@ import matplotlib.pyplot as plt
 from firedrake import *
 import bogovskii
 
-#np.set_printoptions(precision=2, linewidth=125, suppress=True)
+np.set_printoptions(precision=2, linewidth=125, suppress=True)
 
 
-mesh = UnitTriangleMesh(0)
+mesh = UnitTriangleMesh(3)
 (u, v) = SpatialCoordinate(mesh)
-x = u
-y = v 
+x = u + 1/2 * v
+y = sqrt(3)/2 * v 
 V_coord = VectorFunctionSpace(mesh, "CG", 1, dim=2)
 coords = Function(V_coord)
 coords.interpolate(as_vector([x, y]))
@@ -17,11 +17,11 @@ mesh = Mesh(coords)
 (x, y) = SpatialCoordinate(mesh)
 
 
-degree = 2
+degree = 3
 quadrature_degree = 8
 
 funspace_Ned = FunctionSpace(mesh, "N1curl", degree, variant=f"integral({quadrature_degree})")
-funspace_DG = FunctionSpace(mesh, "DG", degree-1, variant=f"integral({quadrature_degree})")
+funspace_DG = FunctionSpace(mesh, "DG", degree-1, variant="spectral")
 
 funspace_CG1 = FunctionSpace(mesh, "CG", 1, variant="equispaced")
 funspace_Ned1 = FunctionSpace(mesh, "N1curl", 1, variant=f"integral({quadrature_degree})")
@@ -31,7 +31,7 @@ mixspace_CG1_Ned1 = MixedFunctionSpace([funspace_CG1, funspace_Ned1])
 ndof_Ned = funspace_Ned.finat_element.space_dimension()
 ndof_DG = funspace_DG.finat_element.space_dimension()
 
-B = Constant(bogovskii._map_DG_face(degree))
+B = Constant(bogovskii._map_DG_face(degree, variant="spectral"))
 
 domain = f"{{[i,j]: 0 <= i < {ndof_Ned} and 0 <= j < {ndof_DG}}}"
 instructions = f"""
@@ -59,28 +59,34 @@ L = inner(Iq, curl(u1))*dx
 solve(a==L, PIq_mixed)
 _, PIq = PIq_mixed.subfunctions
 
+
 Mq = Function(funspace_DG).interpolate(q - Iq)
+Mq_scaled = Function(funspace_DG).interpolate(JacobianDeterminant(mesh) * Mq)
 PMq = Function(funspace_Ned)
 par_loop(
     (domain, instructions),
     dx,
-    {"T": (B, READ), "b": (Mq, READ), "a": (PMq, WRITE)}
+    {"T": (B, READ), "b": (Mq_scaled, READ), "a": (PMq, WRITE)}
 )
 
-print(Iq.dat.data[:])
+#print(Iq.dat.data[:])
+
 print(Mq.dat.data[:])
+
+v = project(curl(PMq), funspace_DG)
+print(v.dat.data[:])
+
 
 Pq = Function(funspace_Ned).interpolate(PIq + PMq)
 
-print(norm(Iq - curl(PIq), "L2"))
-print(norm(Mq - curl(PMq), "L2"))
+print(norm(q - curl(Pq), "L2"))
 
 n_axes = 3
 fig, axes = plt.subplots(1, n_axes, figsize=(18, 5))
 for i in range(n_axes):
     axes[i].axis("equal")
 
-quiver(PMq, axes=axes[0])
-tripcolor(project(curl(PMq), funspace_DG), axes=axes[1], cmap="viridis")
-tripcolor(Mq, axes=axes[2], cmap="viridis")
+quiver(Pq, axes=axes[0])
+tripcolor(project(curl(Pq), funspace_DG), axes=axes[1], cmap="viridis")
+tripcolor(q, axes=axes[2], cmap="viridis")
 plt.show()

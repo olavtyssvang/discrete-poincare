@@ -287,12 +287,12 @@ def _map_Ned_face(degree):
     return Bogovskii_Ned_face
 
 
-def _map_DG_face(degree):
+def _map_DG_face(degree, variant):
     mesh = UnitTriangleMesh(0)
 
     funspace_CG = FunctionSpace(mesh, "CG", degree, variant="equispaced")
     funspace_Ned = FunctionSpace(mesh, "N1curl", degree, variant="integral")
-    funspace_DG = FunctionSpace(mesh, "DG", degree-1, variant="integral")
+    funspace_DG = FunctionSpace(mesh, "DG", degree-1, variant=variant)
     mixspace_CG_Ned = MixedFunctionSpace([funspace_CG, funspace_Ned])
 
     ndof_CG, ndof_CG_face, ndof_CG_edge, ndof_CG_vert = ndof_(funspace_CG)
@@ -320,11 +320,7 @@ def _map_DG_face(degree):
 
     u0 = TrialFunction(funspace_Ned)
     u1 = TestFunction(funspace_Ned)
-
-    print(LHS)
-    print(npmat(inner(curl(u0), curl(u1))*dx)[np.ix_(ref_map_Ned, ref_map_Ned)])
-
-    #print(RHS)
+    
 
     mask_CG_bubble = np.zeros(shape=(ndof_CG), dtype=bool)
     mask_CG_bubble[ndof_CG - ndof_CG_face:] = 1
@@ -337,14 +333,12 @@ def _map_DG_face(degree):
     mask_LHS[ndof_CG:] = mask_Ned_bubble
 
     mask_DG = np.ones(shape=(ndof_DG), dtype=bool)
-    mask_DG[0] = 0
+    if variant == "integral":
+        mask_DG[0] = 0
 
     Bogovskii_DG_face = np.zeros(shape=(ndof_Ned, ndof_DG))
     Bogovskii_DG_face[np.ix_(mask_Ned_bubble, mask_DG)] \
         = (np.linalg.inv(LHS[np.ix_(mask_LHS, mask_LHS)]) @ RHS[np.ix_(mask_LHS, mask_DG)])[np.sum(mask_CG_bubble):, :]
-
-    #Bogovskii_DG_face = (np.linalg.inv(LHS) @ RHS)[ndof_CG:, :]
-    #Bogovskii_DG_face[:, 0] = 0
 
     return Bogovskii_DG_face
 
