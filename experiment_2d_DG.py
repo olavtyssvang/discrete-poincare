@@ -6,14 +6,14 @@ import bogovskii
 import gc
 
 
-MIN_N_SOLVES = 10
-MIN_RUNTIME_S = 1
+MIN_N_SOLVES = 30
+MIN_RUNTIME_S = 10
 
 experiment_degrees = [2, 3, 4]
-experiment_n_refinements = 5
+experiment_n_refinements = 7
 
 
-base_mesh = UnitTriangleMesh(3)
+base_mesh = UnitTriangleMesh(0)
 (u, v) = SpatialCoordinate(base_mesh)
 x = u + 1/2 * v
 y = sqrt(3)/2 * v 
@@ -145,17 +145,14 @@ for mesh_level, mesh in enumerate(MeshHierarchy(base_mesh, experiment_n_refineme
     funspace_DG0 = FunctionSpace(mesh, "DG", 0)
     mesh_size = Function(funspace_DG0).interpolate(CellDiameter(mesh)).dat.data_ro.max()
 
-    data_naive.append({"mesh_id": mesh_level, "mesh_size": mesh_size})
-    data_local.append({"mesh_id": mesh_level, "mesh_size": mesh_size})
-
     for degree in experiment_degrees:
         print(f"{int(time.time() - time_start):4}s elapsed;  degree{degree:3}", end="")
 
         funspace_DG = FunctionSpace(mesh, "DG", degree-1)
-        data_naive[-1]["polynomial_degree"] = \
-        data_local[-1]["polynomial_degree"] = degree
-        data_naive[-1]["number_of_dof"] = \
-        data_local[-1]["number_of_dof"] = funspace_DG.dim()
+        ndof_DG = funspace_DG.dim()
+
+        data_naive.append({"mesh_id": mesh_level, "mesh_size": mesh_size, "polynomial_degree": degree, "number_of_dof": ndof_DG})
+        data_local.append({"mesh_id": mesh_level, "mesh_size": mesh_size, "polynomial_degree": degree, "number_of_dof": ndof_DG})
 
         gc.collect()
         data_naive[-1]["time_elapsed"], data_naive[-1]["number_of_solves"] = runtime_naive(mesh, degree)
