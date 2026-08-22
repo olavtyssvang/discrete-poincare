@@ -306,10 +306,12 @@ def _map_N1_face(degree):
     #
 def _map_DG_face(degree, variant):
     mesh = UnitTriangleMesh(0)
-    (u, v) = SpatialCoordinate(mesh)
-    V_coord = VectorFunctionSpace(mesh, "CG", 1, dim=2)
-    coords = Function(V_coord).interpolate(as_vector([u + 1/2 * v, sqrt(3)/2 * v]))
-    mesh = Mesh(coords)
+
+    if variant != "integral":
+        (u, v) = SpatialCoordinate(mesh)
+        V_coord = VectorFunctionSpace(mesh, "CG", 1, dim=2)
+        coords = Function(V_coord).interpolate(as_vector([u + 1/2 * v, sqrt(3)/2 * v]))
+        mesh = Mesh(coords)
 
     funspace_CG = FunctionSpace(mesh, "CG", degree, variant="equispaced")
     funspace_N1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
@@ -405,7 +407,7 @@ def _map_N1_tetrahedron(degree):
         mask_CG[4 + 6*ndof_CG_edge + face_i * ndof_CG_face: 4 + 6*ndof_CG_edge + (face_i + 1) * ndof_CG_face] = 1
         mask_N1[6*ndof_N1_edge + face_i * ndof_N1_face: 6*ndof_N1_edge + (face_i + 1) * ndof_N1_face] = 1
 
-        Bogovskii_N1_tetrahedron[np.ix_(mask_CG, mask_N1)] = Bogovskii_N1_face[3:, :]
+        Bogovskii_N1_tetrahedron[np.ix_(mask_CG, mask_N1)] = -sqrt(8) * Bogovskii_N1_face[3:, :]
 
 
     mask_N1[:] = 1
@@ -455,10 +457,10 @@ def _map_RT_tetrahedron(degree):
 
 
     mask_CG_bubble = np.zeros(shape=(ndof_CG), dtype=bool)
-    mask_CG_bubble[ndof_CG - ndof_CG_face:] = 1
+    mask_CG_bubble[ndof_CG - ndof_CG_tetrahedron:] = 1
 
     mask_N1_bubble = np.zeros(shape=(ndof_N1), dtype=bool)
-    mask_N1_bubble[ndof_N1 - ndof_N1_face:] = 1
+    mask_N1_bubble[ndof_N1 - ndof_N1_tetrahedron:] = 1
 
     mask_LHS = np.zeros(shape=(ndof_CG + ndof_N1), dtype=bool)
     mask_LHS[:ndof_CG] = mask_CG_bubble
@@ -478,8 +480,12 @@ def _map_RT_tetrahedron(degree):
 
         Bogovskii_RT_tetrahedron[np.ix_(mask_N1, mask_RT)] = Bogovskii_DG_face[3*ndof_N1_edge:, :]
 
+    mask_RT[:] = 1
+    mask_RT[0: 4*ndof_RT_face: ndof_RT_face] = 0
+
     Bogovskii_RT_tetrahedron[np.ix_(mask_N1_bubble, mask_RT)] \
-        = (np.linalg.inv(LHS[np.ix_(mask_LHS, mask_LHS)]) @ RHS[np.ix_(mask_LHS, mask_RT)])[np.sum(mask_CG_bubble):, :]
+        = (np.linalg.inv(LHS[np.ix_(mask_LHS, mask_LHS)]) \
+        @ (RHS[np.ix_(mask_LHS, mask_RT)] - LHS[mask_LHS, ndof_CG:] @ Bogovskii_RT_tetrahedron[:, mask_RT]))[np.sum(mask_CG_bubble):, :]
 
     return Bogovskii_RT_tetrahedron
     #
@@ -548,11 +554,12 @@ def _map_DG_tetrahedron(degree, variant):
 
 
 if __name__ == "__main__":
-    np.set_printoptions(precision=5, linewidth=125, suppress=True)
+    #np.set_printoptions(precision=2, linewidth=125, suppress=True)
     _BOGOVSKII_DEBUG_ENABLE = True
 
+    #_debug_eval_tetrahedron_dof(2)
 
-    degree = 2
+    degree = 3
     B = _map_RT_tetrahedron(degree)
 
     mesh = UnitTetrahedronMesh()
@@ -574,9 +581,9 @@ if __name__ == "__main__":
     ndof_DG, ndof_DG_tetrahedron = ndof_(funspace_DG)
 
 
-    funspace_RT1 = FunctionSpace(mesh, "RT", 1, variant="integral")
+    funspace_RT1 = FunctionSpace(mesh, "RT", 1, variant="integral(6)")
 
-    u0 = Function(funspace_N1).interpolate(as_vector([sin(pi * (1-x-y-z)), sin(pi/2 * (1-x-y-z)), sin(pi/4 * (1-x-y-z))]))
+    u0 = Function(funspace_N1).interpolate(as_vector([sin(pi * (x)), sin(pi/2 * (x)), sin(pi/4 * (x))]))
     If = Function(funspace_RT1).interpolate(curl(u0))
     f = Function(funspace_RT).interpolate(curl(u0) - If)
 
