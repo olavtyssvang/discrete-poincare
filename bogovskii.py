@@ -123,7 +123,7 @@ def _debug_eval_tetrahedron_dof(degree):
 
     funspace_CG = FunctionSpace(mesh, "CG", degree, variant="equispaced")
     funspace_N1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
-    funspace_RT = FunctionSpace(mesh, "Raviart-Thomas", degree, variant="integral")
+    funspace_RT = FunctionSpace(mesh, "RT", degree, variant="integral")
     funspace_DG = FunctionSpace(mesh, "DG", degree-1, variant="integral")
 
     ndof_CG, ndof_CG_tetrahedron, ndof_CG_face, ndof_CG_edge, ndof_CG_vert = ndof_(funspace_CG)
