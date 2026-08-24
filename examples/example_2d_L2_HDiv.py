@@ -44,7 +44,7 @@ p0, u0 = TrialFunctions(mixspace_CG_RT_1)
 p1, u1 = TestFunctions(mixspace_CG_RT_1)
 PIq_mixed = Function(mixspace_CG_RT_1)
 
-a = (inner(curl(p0), u1)*dx - inner(div(u0), div(u1))*dx + inner(p0, p1)*dx - inner(u0, curl(p1))*dx)
+a = (inner(curl(p0), u1)*dx + inner(div(u0), div(u1))*dx + inner(p0, p1)*dx - inner(u0, curl(p1))*dx)
 
 
 Iq = Function(funspace_DG_0).interpolate(q) 

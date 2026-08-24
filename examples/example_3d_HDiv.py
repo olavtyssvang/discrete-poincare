@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from firedrake import *
 from bogovskii import bogovskii_map
 
-np.set_printoptions(precision=2, linewidth=125, suppress=True)
+#np.set_printoptions(precision=2, linewidth=125, suppress=True)
 
 
 mesh = UnitCubeMesh(10, 10, 10)
@@ -44,7 +44,7 @@ p0, u0 = TrialFunctions(mixspace_CG_Ned1_1)
 p1, u1 = TestFunctions(mixspace_CG_Ned1_1)
 PIq_mixed = Function(mixspace_CG_Ned1_1)
 
-a = (inner(grad(p0), u1)*dx - inner(curl(u0), curl(u1))*dx + inner(p0, p1)*dx - inner(u0, grad(p1))*dx)
+a = (inner(grad(p0), u1)*dx + inner(curl(u0), curl(u1))*dx + inner(p0, p1)*dx - inner(u0, grad(p1))*dx)
 
 
 Iq = Function(funspace_RT_1).interpolate(q) 
