@@ -22,8 +22,13 @@ def bogovskii_map(funspace_from, funspace_to):
 
     # Check that the pairing of spaces makes sense 
 
-    if from_space == ufl.sobolevspace.HCurl:
+    if from_family == "Nedelec 1st kind H(curl)":
         assert to_space == ufl.sobolevspace.H1, "Invalid pairing of spaces. Expected H(curl) -> H1."
+        assert to_family == "Lagrange", "Unsupported pairing of families."
+        assert to_degree == from_degree, "Invalid pairing of degrees."
+
+        assert from_variant == "integral", "Unsupported H(curl) variant. Expected integral."
+        assert to_variant == "equispaced" or to_variant == "spectral", "Unsupported H1 variant. Expected equispaced or spectral."
 
         if dim == 2:
             return _map_HCurl_face([to_family, from_family], [to_degree, from_degree], [to_variant, from_variant])
@@ -31,54 +36,118 @@ def bogovskii_map(funspace_from, funspace_to):
         if dim == 3:
             return _map_HCurl_tetrahedron([to_family, from_family], [to_degree, from_degree], [to_variant, from_variant])
         #
-    if from_space == ufl.sobolevspace.HDiv:
+    if from_family == "Nedelec 2nd kind H(curl)":
+        assert to_space == ufl.sobolevspace.H1, "Invalid pairing of spaces. Expected H(curl) -> H1."
+        assert to_family == "Lagrange", "Unsupported pairing of families."
+        assert to_degree == from_degree + 1, "Invalid pairing of degrees."
+
+        assert from_variant == "integral", "Unsupported H(curl) variant. Expected integral."
+        assert to_variant == "equispaced" or to_variant == "spectral", "Unsupported H1 variant. Expected equispaced or spectral."
+
+        if dim == 2:
+            return _map_HCurl_face([to_family, from_family], [to_degree, from_degree], [to_variant, from_variant])
+            #
+        if dim == 3:
+            return _map_HCurl_tetrahedron([to_family, from_family], [to_degree, from_degree], [to_variant, from_variant])
+        #
+    if from_family == "Raviart-Thomas":
         if dim == 2:
             assert to_space == ufl.sobolevspace.H1, f"Invalid pairing of spaces. Expected H(div) -> H1."
+            assert to_family == "Lagrange", "Unsupported pairing of families."
+            assert to_degree == from_degree, "Invalid pairing of degrees."
+
+            assert from_variant == "integral", "Unsupported H(div) variant. Expected integral."
+            assert to_variant == "equispaced" or to_variant == "spectral", "Unsupported H1 variant. Expected equispaced or spectral." 
 
             return _map_HDiv_face([to_family, from_family], [to_degree, from_degree], [to_variant, from_variant])
             #
         if dim == 3:
             assert to_space == ufl.sobolevspace.HCurl, "Invalid pairing of spaces. Expected H(div) -> H(curl)."
+            assert to_family == "Nedelec 1st kind H(curl)" or to_family == "Nedelec 2nd kind H(curl)", "Unsupported pairing of families."
+            assert to_degree == from_degree, "Invalid pairing of degrees."
+
+            assert from_variant == "integral", "Unsupported H(div) variant. Expected integral."
+            assert to_variant == "integral", "Unsupported H(curl) variant. Expected integral."
+
+            if to_family == "Nedelec 1st kind H(curl)":
+                return _map_HDiv_tetrahedron(["Lagrange", to_family, from_family], [to_degree, to_degree, from_degree], ["equispaced", to_variant, from_variant])
+                #
+            elif to_family == "Nedelec 2nd kind H(curl)":
+                return _map_HDiv_tetrahedron(["Lagrange", to_family, from_family], [to_degree + 1, to_degree, from_degree], ["equispaced", to_variant, from_variant])
+        #
+    if from_family == "Brezzi-Douglas-Marini":
+        if dim == 2:
+            assert to_space == ufl.sobolevspace.H1, f"Invalid pairing of spaces. Expected H(div) -> H1."
+            assert to_family == "Lagrange", "Unsupported pairing of families."
+            assert to_degree == from_degree + 1, "Invalid pairing of degrees."
+
+            assert from_variant == "integral", "Unsupported H(div) variant. Expected integral."
+            assert to_variant == "equispaced" or to_variant == "spectral", "Unsupported H1 variant. Expected equispaced or spectral." 
+
+            return _map_HDiv_face([to_family, from_family], [to_degree, from_degree], [to_variant, from_variant])
+            #
+        if dim == 3:
+            assert to_space == ufl.sobolevspace.HCurl, "Invalid pairing of spaces. Expected H(div) -> H(curl)."
+            assert to_family == "Nedelec 1st kind H(curl)" or to_family == "Nedelec 2nd kind H(curl)", "Unsupported pairing of families."
+            assert to_degree == from_degree + 1, "Invalid pairing of degrees."
+
+            assert from_variant == "integral", "Unsupported H(div) variant. Expected integral."
+            assert to_variant == "integral", "Unsupported H(curl) variant. Expected integral."
 
             if to_family == "Nedelec 1st kind H(curl)":
                 return _map_HDiv_tetrahedron(["Lagrange", to_family, from_family], [to_degree, to_degree, from_degree], ["equispaced", to_variant, from_variant])
             elif to_family == "Nedelec 2nd kind H(curl)":
                 return _map_HDiv_tetrahedron(["Lagrange", to_family, from_family], [to_degree + 1, to_degree, from_degree], ["equispaced", to_variant, from_variant])
-            else:
-                raise NotImplementedError
         #
-    if from_space == ufl.sobolevspace.L2:
+    if from_family == "Discontinuous Lagrange":
         if dim == 1:
             assert to_space == ufl.sobolevspace.H1, "Invalid pairing of spaces. Expected L2 -> H1."
+            assert to_family == "Lagrange", "Unsupported pairing of families."
+            assert to_degree == from_degree + 1, "Invalid pairing of degrees." 
+
+            assert from_variant == "equispaced" or from_variant == "spectral", "Unsupported L2 variant. Expected equispaced or spectral."
+            assert to_variant == "integral" or to_variant == "spectral", "Unsupported H1 variant. Expected equispaced or spectral."
 
             return _map_L2_edge([to_family, from_family], [to_degree, from_degree], [to_variant, from_variant])
             #
         if dim == 2:
             assert to_space == ufl.sobolevspace.HCurl or to_space == ufl.sobolevspace.HDiv, "Invalid pairing of spaces. Expected L2 -> H(curl) or L2 -> H(div)."
+            assert from_variant == "equispaced" or from_variant == "spectral", "Unsupported L2 variant. Expected equispaced or spectral."
+
+            if to_space == ufl.sobolevspace.HCurl:
+                assert to_family == "Nedelec 1st kind H(curl)" or to_family == "Nedelec 2nd kind H(curl)", "Unsupported pairing of families."
+                assert to_degree == from_degree + 1, "Invalid pairing of degrees." 
+                assert to_variant == "integral", "Unsupported H(curl) variant. Expected integral."
+                #
+            elif to_space == ufl.sobolevspace.HDiv:
+                assert to_family == "Raviart-Thomas" or to_family == "Brezzi-Douglas-Marini", "Unsupported pairing of families."
+                assert to_degree == from_degree + 1, "Invalid pairing of degrees." 
+                assert to_variant == "integral", "Unsupported H(div) variant. Expected integral."
 
             if to_family == "Nedelec 1st kind H(curl)":
-                return _map_L2_face(["Lagrange", to_family, from_family], [to_degree, to_degree, from_degree], ["integral", to_variant, from_variant])
+                return _map_L2_HCurl_face(["Lagrange", to_family, from_family], [to_degree, to_degree, from_degree], ["integral", to_variant, from_variant])
             elif to_family == "Nedelec 2nd kind H(curl)":
-                return _map_L2_face(["Lagrange", to_family, from_family], [to_degree + 1, to_degree, from_degree], ["integral", to_variant, from_variant])
+                return _map_L2_HCurl_face(["Lagrange", to_family, from_family], [to_degree + 1, to_degree, from_degree], ["integral", to_variant, from_variant])
             if to_family == "Raviart-Thomas":
-                return _map_L2_face(["Lagrange", to_family, from_family], [to_degree, to_degree, from_degree], ["integral", to_variant, from_variant])
+                return _map_L2_HDiv_face(["Lagrange", to_family, from_family], [to_degree, to_degree, from_degree], ["integral", to_variant, from_variant])
             elif to_family == "Brezzi-Douglas-Marini":
-                return _map_L2_face(["Lagrange", to_family, from_family], [to_degree + 1, to_degree, from_degree], ["integral", to_variant, from_variant])
-            else:
-                raise NotImplementedError
+                return _map_L2_HDiv_face(["Lagrange", to_family, from_family], [to_degree + 1, to_degree, from_degree], ["integral", to_variant, from_variant])
             #  
         if dim == 3:
             assert to_space == ufl.sobolevspace.HDiv, "Invalid pairing of spaces. Expected L2 -> H(div)."
+            assert to_family == "Raviart-Thomas" or to_family == "Brezzi-Douglas-Marini", "Unsupported pairing of families."
+            assert to_degree == from_degree + 1, "Invalid pairing of degrees." 
+
+            assert from_variant == "equispaced" or from_variant == "spectral", "Unsupported L2 variant. Expected equispaced or spectral."
+            assert to_variant == "integral", "Unsupported H(div) variant. Expected integral."
 
             if to_family == "Raviart-Thomas":
-                return _map_L2_face(["Nedelec 1st kind H(curl)", to_family, from_family], [to_degree, to_degree, from_degree], ["integral", to_variant, from_variant])
+                return _map_L2_tetrahedron(["Nedelec 1st kind H(curl)", to_family, from_family], [to_degree, to_degree, from_degree], ["integral", to_variant, from_variant])
             elif to_family == "Brezzi-Douglas-Marini":
-                return _map_L2_face(["Nedelec 1st kind H(curl)", to_family, from_family], [to_degree + 1, to_degree, from_degree], ["integral", to_variant, from_variant])
-            else:
-                raise NotImplementedError
+                return _map_L2_tetrahedron(["Nedelec 1st kind H(curl)", to_family, from_family], [to_degree + 1, to_degree, from_degree], ["integral", to_variant, from_variant])
         #
     else:
-        raise ValueError
+        raise NotImplementedError
     
 
 def _debug_eval_edge_dof(degree):
@@ -334,7 +403,12 @@ def _map_HCurl_face(family, degree, variant):
     mask_HCurl = np.zeros(shape=(ndof_HCurl), dtype=bool)
 
     Bogovskii_L2_edge = None
-    if 
+    if family[1] == "Nedelec 1st kind H(curl)":
+        Bogovskii_L2_edge = _map_L2_edge([family[0], "Discontinuous Lagrange"], [degree[0], degree[1] - 1], [variant[0], "integral"])
+    elif family[1] == "Nedelec 2nd kind H(curl)":
+        Bogovskii_L2_edge = _map_L2_edge([family[0], "Discontinuous Lagrange"], [degree[0], degree[1]], [variant[0], "integral"])
+    else:
+        raise NotImplementedError
 
     Bogovskii_HCurl_face = np.zeros(shape=(ndof_H1, ndof_HCurl))
     
@@ -361,21 +435,80 @@ def _map_HCurl_face(family, degree, variant):
     #
     #
 def _map_HDiv_face(family, degree, variant):
-    return None
+    mesh = UnitTriangleMesh(0)
+    (u, v) = SpatialCoordinate(mesh)
+    V_coord = VectorFunctionSpace(mesh, "CG", 1, dim=2)
+    coords = Function(V_coord).interpolate(as_vector([u + 1/2 * v, sqrt(3)/2 * v]))
+    mesh = Mesh(coords)
+
+    funspace_H1 = FunctionSpace(mesh, family[0], degree[0], variant=variant[0])
+    funspace_HDiv = FunctionSpace(mesh, family[1], degree[1], variant=variant[1])
+
+    ndof_H1, ndof_H1_face, ndof_H1_edge, ndof_H1_vert = ndof_(funspace_H1)
+    ndof_HDiv, ndof_HDiv_face, ndof_HDiv_edge = ndof_(funspace_HDiv)
+
+    ref_map_H1 = funspace_H1.cell_node_map().values[0]
+    ref_map_HDiv = funspace_HDiv.cell_node_map().values[0]
+
+
+    p0 = TrialFunction(funspace_H1)
+    p1 = TestFunction(funspace_H1)
+    u0 = TrialFunction(funspace_HDiv)
+
+    LHS = npmat(inner(curl(p0), curl(p1))*dx)[np.ix_(ref_map_H1, ref_map_H1)]
+    RHS = npmat(inner(u0, curl(p1))*dx)[np.ix_(ref_map_H1, ref_map_HDiv)]
+
+
+    mask_H1_bubble = np.zeros(shape=(ndof_H1), dtype=bool)
+    mask_H1_bubble[ndof_H1 - ndof_H1_face:] = 1
+
+    mask_H1 = np.zeros(shape=(ndof_H1), dtype=bool)
+    mask_HDiv = np.zeros(shape=(ndof_HDiv), dtype=bool)
+
+    Bogovskii_L2_edge = None
+    if family[1] == "Raviart-Thomas":
+        Bogovskii_L2_edge = _map_L2_edge(["Lagrange", "Discontinuous Lagrange"], [degree[1], degree[1] - 1], ["equispaced", "integral"])
+    elif family[1] == "Brezzi-Douglas-Marini":
+        Bogovskii_L2_edge = _map_L2_edge(["Lagrange", "Discontinuous Lagrange"], [degree[1] + 1, degree[1]], ["equispaced", "integral"])
+    else:
+        raise NotImplementedError
+
+    Bogovskii_HDiv_face = np.zeros(shape=(ndof_H1, ndof_HDiv))
+    
+
+    for edge_i in range(3):
+        mask_H1[:] = 0; mask_HDiv[:] = 0
+
+        mask_H1[3 + edge_i * ndof_H1_edge: 3 + (edge_i + 1) * ndof_H1_edge] = 1
+        mask_HDiv[edge_i * ndof_HDiv_edge: (edge_i + 1) * ndof_HDiv_edge] = 1
+
+        # I have no clue where this factor "-2/sqrt(2)" comes from, but it's what makes it work
+        Bogovskii_HDiv_face[np.ix_(mask_H1, mask_HDiv)] = -sqrt(2) * Bogovskii_L2_edge[2:, :] 
+
+
+    mask_HDiv[:] = 1
+    mask_HDiv[0: 3*ndof_HDiv_edge: ndof_HDiv_edge] = 0
+
+    Bogovskii_HDiv_face[np.ix_(mask_H1_bubble, mask_HDiv)] \
+        = np.linalg.inv(LHS[np.ix_(mask_H1_bubble, mask_H1_bubble)]) \
+        @ (RHS[np.ix_(mask_H1_bubble, mask_HDiv)] - LHS[mask_H1_bubble, :] @ Bogovskii_HDiv_face[:, mask_HDiv])
+
+
+    return Bogovskii_HDiv_face
     #
     #
-def _map_L2_face(family, degree, variant):
+def _map_L2_HCurl_face(family, degree, variant):
     mesh = UnitTriangleMesh(0)
 
-    if variant != "integral":
+    if variant[2] != "integral":
         (u, v) = SpatialCoordinate(mesh)
         V_coord = VectorFunctionSpace(mesh, "CG", 1, dim=2)
         coords = Function(V_coord).interpolate(as_vector([u + 1/2 * v, sqrt(3)/2 * v]))
         mesh = Mesh(coords)
 
-    funspace_H1 = FunctionSpace(mesh, "CG", degree, variant="equispaced")
-    funspace_HCurl = FunctionSpace(mesh, "N1curl", degree, variant="integral")
-    funspace_L2 = FunctionSpace(mesh, "DG", degree-1, variant=variant)
+    funspace_H1 = FunctionSpace(mesh, family[0], degree[0], variant=variant[0])
+    funspace_HCurl = FunctionSpace(mesh, family[1], degree[1], variant=variant[1])
+    funspace_L2 = FunctionSpace(mesh, family[2], degree[2], variant=variant[2])
     mixspace_H1_HCurl = MixedFunctionSpace([funspace_H1, funspace_HCurl])
 
     ndof_H1, ndof_H1_face, ndof_H1_edge, ndof_H1_vert = ndof_(funspace_H1)
@@ -413,11 +546,70 @@ def _map_L2_face(family, degree, variant):
     mask_LHS[ndof_H1:] = mask_HCurl_bubble
 
     mask_L2 = np.ones(shape=(ndof_L2), dtype=bool)
-    if variant == "integral":
+    if variant[2] == "integral":
         mask_L2[0] = 0
 
     Bogovskii_L2_face = np.zeros(shape=(ndof_HCurl, ndof_L2))
     Bogovskii_L2_face[np.ix_(mask_HCurl_bubble, mask_L2)] \
+        = (np.linalg.inv(LHS[np.ix_(mask_LHS, mask_LHS)]) @ RHS[np.ix_(mask_LHS, mask_L2)])[np.sum(mask_H1_bubble):, :]
+
+    return Bogovskii_L2_face
+    #
+    #
+def _map_L2_HDiv_face(family, degree, variant):
+    mesh = UnitTriangleMesh(0)
+
+    if variant[2] != "integral":
+        (u, v) = SpatialCoordinate(mesh)
+        V_coord = VectorFunctionSpace(mesh, "CG", 1, dim=2)
+        coords = Function(V_coord).interpolate(as_vector([u + 1/2 * v, sqrt(3)/2 * v]))
+        mesh = Mesh(coords)
+
+    funspace_H1 = FunctionSpace(mesh, family[0], degree[0], variant=variant[0])
+    funspace_HDiv = FunctionSpace(mesh, family[1], degree[1], variant=variant[1])
+    funspace_L2 = FunctionSpace(mesh, family[2], degree[2], variant=variant[2])
+    mixspace_H1_HDiv = MixedFunctionSpace([funspace_H1, funspace_HDiv])
+
+    ndof_H1, ndof_H1_face, ndof_H1_edge, ndof_H1_vert = ndof_(funspace_H1)
+    ndof_HDiv, ndof_HDiv_face, ndof_HDiv_edge = ndof_(funspace_HDiv)
+    ndof_L2, ndof_L2_face = ndof_(funspace_L2)
+
+    ref_map_H1 = funspace_H1.cell_node_map().values[0]
+    ref_map_HDiv = funspace_HDiv.cell_node_map().values[0]
+    ref_map_L2 = funspace_L2.cell_node_map().values[0]
+    
+    ref_map_LHS = np.zeros(shape=(ndof_H1 + ndof_HDiv), dtype=int)
+    ref_map_LHS[:ndof_H1] = ref_map_H1
+    ref_map_LHS[ndof_H1:] = ref_map_HDiv + ndof_H1
+
+    p0, u0 = TrialFunctions(mixspace_H1_HDiv)
+    p1, u1 = TestFunctions(mixspace_H1_HDiv)
+    q0 = TrialFunction(funspace_L2)
+
+    LHS = npmat(
+        inner(curl(p0), u1)*dx + inner(div(u0), div(u1))*dx
+    +   inner(p0, p1)*dx - inner(u0, curl(p1))*dx
+    )[np.ix_(ref_map_LHS, ref_map_LHS)]
+
+    RHS = npmat(inner(q0, div(u1))*dx)[np.ix_(ref_map_LHS, ref_map_L2)]
+
+
+    mask_H1_bubble = np.zeros(shape=(ndof_H1), dtype=bool)
+    mask_H1_bubble[ndof_H1 - ndof_H1_face:] = 1
+
+    mask_HDiv_bubble = np.zeros(shape=(ndof_HDiv), dtype=bool)
+    mask_HDiv_bubble[ndof_HDiv - ndof_HDiv_face:] = 1
+
+    mask_LHS = np.zeros(shape=(ndof_H1 + ndof_HDiv), dtype=bool)
+    mask_LHS[:ndof_H1] = mask_H1_bubble
+    mask_LHS[ndof_H1:] = mask_HDiv_bubble
+
+    mask_L2 = np.ones(shape=(ndof_L2), dtype=bool)
+    if variant[2] == "integral":
+        mask_L2[0] = 0
+
+    Bogovskii_L2_face = np.zeros(shape=(ndof_HDiv, ndof_L2))
+    Bogovskii_L2_face[np.ix_(mask_HDiv_bubble, mask_L2)] \
         = (np.linalg.inv(LHS[np.ix_(mask_LHS, mask_LHS)]) @ RHS[np.ix_(mask_LHS, mask_L2)])[np.sum(mask_H1_bubble):, :]
 
     return Bogovskii_L2_face
@@ -430,8 +622,8 @@ def _map_HCurl_tetrahedron(family, degree, variant):
     coords = Function(V_coord).interpolate(as_vector([u + 1/2 * v + 1/2 * w, sqrt(3)/2 * v + sqrt(3)/6 * w, sqrt(6)/3 * w]))
     mesh = Mesh(coords)
     
-    funspace_H1 = FunctionSpace(mesh, "CG", degree, variant="equispaced")
-    funspace_HCurl = FunctionSpace(mesh, "N1curl", degree, variant="integral")
+    funspace_H1 = FunctionSpace(mesh, family[0], degree[0], variant=variant[0])
+    funspace_HCurl = FunctionSpace(mesh, family[1], degree[1], variant=variant[1])
 
     ndof_H1, ndof_H1_tetrahedron, ndof_H1_face, ndof_H1_edge, ndof_H1_vert = ndof_(funspace_H1)
     ndof_HCurl, ndof_HCurl_tetrahedron, ndof_HCurl_face, ndof_HCurl_edge = ndof_(funspace_HCurl)
@@ -454,7 +646,7 @@ def _map_HCurl_tetrahedron(family, degree, variant):
     mask_H1 = np.zeros(shape=(ndof_H1), dtype=bool)
     mask_HCurl = np.zeros(shape=(ndof_HCurl), dtype=bool)
 
-    Bogovskii_HCurl_face = _map_HCurl_face(degree)
+    Bogovskii_HCurl_face = _map_HCurl_face(family, degree, variant)
     Bogovskii_HCurl_tetrahedron = np.zeros(shape=(ndof_H1, ndof_HCurl))
 
     for face_i, edges in enumerate([(0, 1, 2), (1, 3, 5), (0, 3, 4), (2, 4, 5)]):
@@ -487,9 +679,9 @@ def _map_HDiv_tetrahedron(family, degree, variant):
     coords = Function(V_coord).interpolate(as_vector([u + 1/2 * v + 1/2 * w, sqrt(3)/2 * v + sqrt(3)/6 * w, sqrt(6)/3 * w]))
     mesh = Mesh(coords)
 
-    funspace_H1 = FunctionSpace(mesh, "CG", degree, variant="equispaced")
-    funspace_HCurl = FunctionSpace(mesh, "N1curl", degree, variant="integral")
-    funspace_HDiv = FunctionSpace(mesh, "RT", degree, variant="integral")
+    funspace_H1 = FunctionSpace(mesh, family[0], degree[0], variant=variant[0])
+    funspace_HCurl = FunctionSpace(mesh, family[1], degree[1], variant=variant[1])
+    funspace_HDiv = FunctionSpace(mesh, family[2], degree[2], variant=variant[2])
     mixspace_H1_HCurl = MixedFunctionSpace([funspace_H1, funspace_HCurl])
 
     ndof_H1, ndof_H1_tetrahedron, ndof_H1_face, ndof_H1_edge, ndof_H1_vert = ndof_(funspace_H1)
@@ -530,6 +722,13 @@ def _map_HDiv_tetrahedron(family, degree, variant):
     mask_HDiv = np.zeros(shape=(ndof_HDiv), dtype=bool)
 
     Bogovskii_L2_face = _map_L2_face(degree, variant="integral")
+    if family[2] == "Raviart-Thomas":
+        Bogovskii_L2_face = _map_L2_edge([family[0], family[1], "Discontinuous Lagrange"], [degree[0], degree[1], degree[2] - 1], [variant[0], variant[1], "integral"])
+    elif family[2] == "Brezzi-Douglas-Marini":
+        Bogovskii_L2_face = _map_L2_edge([family[0], family[1], "Discontinuous Lagrange"], [degree[0], degree[1], degree[2]], [variant[0], variant[1], "integral"])
+    else:
+        raise NotImplementedError
+
     Bogovskii_HDiv_tetrahedron = np.zeros(shape=(ndof_HCurl, ndof_HDiv))
 
     for face_i in range(4):
@@ -557,9 +756,9 @@ def _map_L2_tetrahedron(family, degree, variant):
     coords = Function(V_coord).interpolate(as_vector([u + 1/2 * v + 1/2 * w, sqrt(3)/2 * v + sqrt(3)/6 * w, sqrt(6)/3 * w]))
     mesh = Mesh(coords)
 
-    funspace_HCurl = FunctionSpace(mesh, "N1curl", degree, variant="integral")
-    funspace_HDiv = FunctionSpace(mesh, "RT", degree, variant="integral")
-    funspace_L2 = FunctionSpace(mesh, "DG", degree-1, variant=variant)
+    funspace_HCurl = FunctionSpace(mesh, family[0], degree[0], variant=variant[0])
+    funspace_HDiv = FunctionSpace(mesh, family[1], degree[1], variant=variant[1])
+    funspace_L2 = FunctionSpace(mesh, family[2], degree[2], variant=variant[2])
     mixspace_HCurl_HDiv = MixedFunctionSpace([funspace_HCurl, funspace_HDiv])
 
     ndof_HCurl, ndof_HCurl_tetrahedron, ndof_HCurl_face, ndof_HCurl_edge = ndof_(funspace_HCurl)

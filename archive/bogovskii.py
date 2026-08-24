@@ -1,3 +1,11 @@
+#
+#   For reference, this is the original code written specifically for the trimmed sequence
+#       CG -> N1curl -> RT -> DG
+# 
+#   We hope it is easier to read than it abstraction.
+#
+
+
 import numpy as np
 import scipy.sparse as sp
 from firedrake import *
@@ -5,18 +13,6 @@ from firedrake import *
 
 _BOGOVSKII_DEBUG_ENABLE = False
 
-
-def map(degree, domain):
-    if domain == "edge":
-        return _map_DG_edge(degree)
-    
-    if domain == "face":
-        return _map_N1_face(degree)
-    
-    if domain == "tetrahedron":
-        return _map_tetrahedron(degree)
-    
-    raise ValueError(domain)
 
 def _map_tetrahedron(degree):
     mesh = UnitTetrahedronMesh(0)
