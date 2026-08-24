@@ -8,7 +8,17 @@ _BOGOVSKII_DEBUG_ENABLE = False
 
 def _constructor_args(funspace):
     el = funspace.ufl_element()
-    return el.sobolev_space, el.family(), el.degree(), el.variant()
+
+    space = el.sobolev_space
+    family = el.family()
+    degree = el.degree()
+    variant = el.variant()
+
+    # targeting custom quadrature degrees, when variant="integral(...)"
+    if len(variant) > 8 and variant[:8] == "integral":
+        variant = "integral" 
+
+    return space, family, degree, variant
 
 def bogovskii_map(funspace_from, funspace_to):
 
@@ -553,7 +563,10 @@ def _map_L2_HCurl_face(family, degree, variant):
     Bogovskii_L2_face[np.ix_(mask_HCurl_bubble, mask_L2)] \
         = (np.linalg.inv(LHS[np.ix_(mask_LHS, mask_LHS)]) @ RHS[np.ix_(mask_LHS, mask_L2)])[np.sum(mask_H1_bubble):, :]
 
-    return Bogovskii_L2_face
+    if variant[2] != "integral":
+        return 2/sqrt(3)* Bogovskii_L2_face
+    else:
+        return Bogovskii_L2_face
     #
     #
 def _map_L2_HDiv_face(family, degree, variant):
@@ -649,7 +662,7 @@ def _map_HCurl_tetrahedron(family, degree, variant):
     Bogovskii_HCurl_face = _map_HCurl_face(family, degree, variant)
     Bogovskii_HCurl_tetrahedron = np.zeros(shape=(ndof_H1, ndof_HCurl))
 
-    for face_i, edges in enumerate([(0, 1, 2), (1, 3, 5), (0, 3, 4), (2, 4, 5)]):
+    for face_i, edges in enumerate([(0, 1, 2), (0, 3, 4), (1, 3, 5), (2, 4, 5)]):
         mask_H1[:] = 0; mask_HCurl[:] = 0
 
         for edge_i in edges:
@@ -659,11 +672,11 @@ def _map_HCurl_tetrahedron(family, degree, variant):
         mask_H1[4 + 6*ndof_H1_edge + face_i * ndof_H1_face: 4 + 6*ndof_H1_edge + (face_i + 1) * ndof_H1_face] = 1
         mask_HCurl[6*ndof_HCurl_edge + face_i * ndof_HCurl_face: 6*ndof_HCurl_edge + (face_i + 1) * ndof_HCurl_face] = 1
 
-        Bogovskii_HCurl_tetrahedron[np.ix_(mask_H1, mask_HCurl)] = -sqrt(8) * Bogovskii_HCurl_face[3:, :]
+        Bogovskii_HCurl_tetrahedron[np.ix_(mask_H1, mask_HCurl)] = Bogovskii_HCurl_face[3:, :]
 
 
     mask_HCurl[:] = 1
-    mask_HCurl[0: 3*ndof_HCurl_edge: ndof_HCurl_edge] = 0
+    mask_HCurl[0: 4*ndof_HCurl_edge: ndof_HCurl_edge] = 0
 
     Bogovskii_HCurl_tetrahedron[np.ix_(mask_H1_bubble, mask_HCurl)] \
         = np.linalg.inv(LHS[np.ix_(mask_H1_bubble, mask_H1_bubble)]) \
@@ -721,11 +734,11 @@ def _map_HDiv_tetrahedron(family, degree, variant):
     mask_HCurl = np.zeros(shape=(ndof_HCurl), dtype=bool)
     mask_HDiv = np.zeros(shape=(ndof_HDiv), dtype=bool)
 
-    Bogovskii_L2_face = _map_L2_face(degree, variant="integral")
+    Bogovskii_L2_face = None
     if family[2] == "Raviart-Thomas":
-        Bogovskii_L2_face = _map_L2_edge([family[0], family[1], "Discontinuous Lagrange"], [degree[0], degree[1], degree[2] - 1], [variant[0], variant[1], "integral"])
+        Bogovskii_L2_face = _map_L2_HCurl_face([family[0], family[1], "Discontinuous Lagrange"], [degree[0], degree[1], degree[2] - 1], [variant[0], variant[1], "integral"])
     elif family[2] == "Brezzi-Douglas-Marini":
-        Bogovskii_L2_face = _map_L2_edge([family[0], family[1], "Discontinuous Lagrange"], [degree[0], degree[1], degree[2]], [variant[0], variant[1], "integral"])
+        Bogovskii_L2_face = _map_L2_HCurl_face([family[0], family[1], "Discontinuous Lagrange"], [degree[0], degree[1], degree[2]], [variant[0], variant[1], "integral"])
     else:
         raise NotImplementedError
 
@@ -813,20 +826,52 @@ def _map_L2_tetrahedron(family, degree, variant):
 
 
 if __name__ == "__main__":
-    #np.set_printoptions(precision=2, linewidth=125, suppress=True)
+    np.set_printoptions(precision=2, linewidth=125, suppress=True)
     _BOGOVSKII_DEBUG_ENABLE = True
 
     #_debug_eval_tetrahedron_dof(2)
 
     degree = 3
 
-    mesh = UnitTriangleMesh(0)
-    #(x, y, z) = SpatialCoordinate(mesh)
+    mesh = UnitTetrahedronMesh()
+    (x, y, z) = SpatialCoordinate(mesh)
 
-    funspace_H1 = FunctionSpace(mesh, "CG", degree, variant="equispaced")
-    funspace_HCurl = FunctionSpace(mesh, "Nedelec 1st kind H(curl)", degree, variant="integral")
-    funspace_HDiv = FunctionSpace(mesh, "RT", degree, variant="integral")
-    funspace_L2 = FunctionSpace(mesh, "DG", degree-1, variant="spectral")
 
-    B = bogovskii_map(funspace_HCurl, funspace_H1)
-    B = bogovskii_map(funspace_L2, funspace_HDiv)
+    funspace_CG = FunctionSpace(mesh, "CG", degree, variant="equispaced")
+    funspace_Ned1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
+    funspace_RT = FunctionSpace(mesh, "RT", degree, variant="integral")
+    funspace_DG = FunctionSpace(mesh, "DG", degree-1, variant="spectral")
+
+    ref_map_CG = funspace_CG.cell_node_map().values[0]
+    ref_map_Ned1 = funspace_Ned1.cell_node_map().values[0]
+    ref_map_RT = funspace_RT.cell_node_map().values[0]
+    ref_map_DG = funspace_DG.cell_node_map().values[0]
+
+    ndof_CG, ndof_CG_tetrahedron, ndof_CG_face, ndof_CG_edge, ndof_CG_vert = ndof_(funspace_CG)
+    ndof_Ned1, ndof_Ned1_tetrahedron, ndof_Ned1_face, ndof_Ned1_edge = ndof_(funspace_Ned1)
+    ndof_RT, ndof_RT_tetrahedron, ndof_RT_face = ndof_(funspace_RT)
+    ndof_DG, ndof_DG_tetrahedron = ndof_(funspace_DG)
+
+
+    B = bogovskii_map(funspace_Ned1, funspace_CG)
+
+    funspace_Ned1_1 = FunctionSpace(mesh, "N1curl", 1, variant="integral(6)")
+
+    u0 = Function(funspace_CG).interpolate(sin(x))
+    If = Function(funspace_Ned1_1).interpolate(grad(u0))
+    f = Function(funspace_Ned1).interpolate(grad(u0) - If)
+
+    u = Function(funspace_CG)
+    u.dat.data[ref_map_CG] = B @ f.dat.data[ref_map_Ned1]
+    du = Function(funspace_Ned1).interpolate(grad(u))
+
+    print(f.dat.data[ref_map_Ned1][:6*ndof_Ned1_edge])
+    print(du.dat.data[ref_map_Ned1][:6*ndof_Ned1_edge])
+    print()
+    print(f.dat.data[ref_map_Ned1][6*ndof_Ned1_edge:ndof_Ned1 - ndof_Ned1_tetrahedron])
+    print(du.dat.data[ref_map_Ned1][6*ndof_Ned1_edge:ndof_Ned1 - ndof_Ned1_tetrahedron])
+    print()
+    print(f.dat.data[ref_map_Ned1][ndof_Ned1 - ndof_Ned1_tetrahedron:])
+    print(du.dat.data[ref_map_Ned1][ndof_Ned1 - ndof_Ned1_tetrahedron:])
+    print()
+    print(np.max(np.abs(f.dat.data[:] - du.dat.data[:])))

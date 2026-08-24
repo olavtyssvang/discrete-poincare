@@ -19,7 +19,7 @@ def _map_tetrahedron(degree):
 
     funspace_RR = FunctionSpace(mesh, "R", 0)
     funspace_CG = FunctionSpace(mesh, "CG", degree)
-    #funspace_N1 = FunctionSpace(mesh, "N1curl", degree)
+    #funspace_Ned1 = FunctionSpace(mesh, "N1curl", degree)
     funspace_DG = FunctionSpace(mesh, "DG", degree-1)
 
 
@@ -65,15 +65,15 @@ def _debug_eval_face_dof(degree):
     mesh = UnitTriangleMesh(0)
 
     funspace_CG = FunctionSpace(mesh, "CG", degree, variant="equispaced")
-    funspace_N1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
+    funspace_Ned1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
     funspace_DG = FunctionSpace(mesh, "DG", degree-1, variant="integral")
 
     ndof_CG, ndof_CG_face, ndof_CG_edge, ndof_CG_vert = ndof_(funspace_CG)
-    ndof_N1, ndof_N1_face, ndof_N1_edge = ndof_(funspace_N1)
+    ndof_Ned1, ndof_Ned1_face, ndof_Ned1_edge = ndof_(funspace_Ned1)
     ndof_DG, ndof_DG_face = ndof_(funspace_DG)
 
     ref_map_CG = funspace_CG.cell_node_map().values[0]
-    ref_map_N1 = funspace_N1.cell_node_map().values[0]
+    ref_map_Ned1 = funspace_Ned1.cell_node_map().values[0]
     ref_map_DG = funspace_DG.cell_node_map().values[0]
 
     out = "====  CG(face):  ====\n"
@@ -90,11 +90,11 @@ def _debug_eval_face_dof(degree):
 
     out += "\n==== Ned(face):  ====\n"
 
-    p = Function(funspace_N1)
-    for i in range(ndof_N1):
-        dof = np.zeros(shape=(ndof_N1))
+    p = Function(funspace_Ned1)
+    for i in range(ndof_Ned1):
+        dof = np.zeros(shape=(ndof_Ned1))
         dof[i] = 1
-        p.dat.data[ref_map_N1] = dof
+        p.dat.data[ref_map_Ned1] = dof
 
         for x in [(0, 0), (1, 0), (0, 1)]:
             out += f"{p(x)[0]: 2.1f},{p(x)[1]: 2.1f}  "
@@ -118,17 +118,17 @@ def _debug_eval_tetrahedron_dof(degree):
     mesh = UnitTetrahedronMesh()
 
     funspace_CG = FunctionSpace(mesh, "CG", degree, variant="equispaced")
-    funspace_N1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
+    funspace_Ned1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
     funspace_RT = FunctionSpace(mesh, "RT", degree, variant="integral")
     funspace_DG = FunctionSpace(mesh, "DG", degree-1, variant="integral")
 
     ndof_CG, ndof_CG_tetrahedron, ndof_CG_face, ndof_CG_edge, ndof_CG_vert = ndof_(funspace_CG)
-    ndof_N1, ndof_N1_tetrahedron, ndof_N1_face, ndof_N1_edge = ndof_(funspace_N1)
+    ndof_Ned1, ndof_Ned1_tetrahedron, ndof_Ned1_face, ndof_Ned1_edge = ndof_(funspace_Ned1)
     ndof_RT, ndof_RT_tetrahedron, ndof_RT_face = ndof_(funspace_RT)
     ndof_DG, ndof_DG_tetrahedron = ndof_(funspace_DG)
 
     ref_map_CG = funspace_CG.cell_node_map().values[0]
-    ref_map_N1 = funspace_N1.cell_node_map().values[0]
+    ref_map_Ned1 = funspace_Ned1.cell_node_map().values[0]
     ref_map_RT = funspace_RT.cell_node_map().values[0]
     ref_map_DG = funspace_DG.cell_node_map().values[0]
 
@@ -148,11 +148,11 @@ def _debug_eval_tetrahedron_dof(degree):
 
     out += "\n==== Ned(tetrahedron):  ====\n"
 
-    p = Function(funspace_N1)
-    for i in range(ndof_N1):
-        dof = np.zeros(shape=(ndof_N1))
+    p = Function(funspace_Ned1)
+    for i in range(ndof_Ned1):
+        dof = np.zeros(shape=(ndof_Ned1))
         dof[i] = 1
-        p.dat.data[ref_map_N1] = dof
+        p.dat.data[ref_map_Ned1] = dof
 
         for x in [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), 
                   (.5, 0, 0), (0, .5, 0), (0, 0, .5), (.5, .5, 0), (.5, 0, .5), (0, .5, .5)]:
@@ -208,8 +208,6 @@ def ndof_(funspace):
     return fe.space_dimension(), *reversed(out)
 
 
-_face_edges = enumerate([(0, 1, 2), (1, 3, 5), (0, 3, 4), (2, 4, 5)])
-
 def _map_DG_edge(degree):
     mesh = UnitIntervalMesh(1)
 
@@ -244,7 +242,7 @@ def _map_DG_edge(degree):
     return Bogovskii_DG_edge
     #
     #
-def _map_N1_face(degree):
+def _map_Ned1_face(degree):
     mesh = UnitTriangleMesh(0)
     (u, v) = SpatialCoordinate(mesh)
     V_coord = VectorFunctionSpace(mesh, "CG", 1, dim=2)
@@ -252,52 +250,52 @@ def _map_N1_face(degree):
     mesh = Mesh(coords)
 
     funspace_CG = FunctionSpace(mesh, "CG", degree, variant="equispaced")
-    funspace_N1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
+    funspace_Ned1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
 
     ndof_CG, ndof_CG_face, ndof_CG_edge, ndof_CG_vert = ndof_(funspace_CG)
-    ndof_N1, ndof_N1_face, ndof_N1_edge = ndof_(funspace_N1)
+    ndof_Ned1, ndof_Ned1_face, ndof_Ned1_edge = ndof_(funspace_Ned1)
 
     ref_map_CG = funspace_CG.cell_node_map().values[0]
-    ref_map_N1 = funspace_N1.cell_node_map().values[0]
+    ref_map_Ned1 = funspace_Ned1.cell_node_map().values[0]
 
 
     p0 = TrialFunction(funspace_CG)
     p1 = TestFunction(funspace_CG)
-    u0 = TrialFunction(funspace_N1)
+    u0 = TrialFunction(funspace_Ned1)
 
     LHS = npmat(inner(grad(p0), grad(p1))*dx)[np.ix_(ref_map_CG, ref_map_CG)]
-    RHS = npmat(inner(u0, grad(p1))*dx)[np.ix_(ref_map_CG, ref_map_N1)]
+    RHS = npmat(inner(u0, grad(p1))*dx)[np.ix_(ref_map_CG, ref_map_Ned1)]
 
 
     mask_CG_bubble = np.zeros(shape=(ndof_CG), dtype=bool)
     mask_CG_bubble[ndof_CG - ndof_CG_face:] = 1
 
     mask_CG = np.zeros(shape=(ndof_CG), dtype=bool)
-    mask_N1 = np.zeros(shape=(ndof_N1), dtype=bool)
+    mask_Ned1 = np.zeros(shape=(ndof_Ned1), dtype=bool)
 
     Bogovskii_DG_edge = _map_DG_edge(degree)
-    Bogovskii_N1_face = np.zeros(shape=(ndof_CG, ndof_N1))
+    Bogovskii_Ned1_face = np.zeros(shape=(ndof_CG, ndof_Ned1))
     
 
     for edge_i in range(3):
-        mask_CG[:] = 0; mask_N1[:] = 0
+        mask_CG[:] = 0; mask_Ned1[:] = 0
 
         mask_CG[3 + edge_i * ndof_CG_edge: 3 + (edge_i + 1) * ndof_CG_edge] = 1
-        mask_N1[edge_i * ndof_N1_edge: (edge_i + 1) * ndof_N1_edge] = 1
+        mask_Ned1[edge_i * ndof_Ned1_edge: (edge_i + 1) * ndof_Ned1_edge] = 1
 
         # I have no clue where this factor "-2/sqrt(2)" comes from, but it's what makes it work
-        Bogovskii_N1_face[np.ix_(mask_CG, mask_N1)] = -sqrt(2) * Bogovskii_DG_edge[2:, :] 
+        Bogovskii_Ned1_face[np.ix_(mask_CG, mask_Ned1)] = -sqrt(2) * Bogovskii_DG_edge[2:, :] 
 
 
-    mask_N1[:] = 1
-    mask_N1[0: 3*ndof_N1_edge: ndof_N1_edge] = 0
+    mask_Ned1[:] = 1
+    mask_Ned1[0: 3*ndof_Ned1_edge: ndof_Ned1_edge] = 0
 
-    Bogovskii_N1_face[np.ix_(mask_CG_bubble, mask_N1)] \
+    Bogovskii_Ned1_face[np.ix_(mask_CG_bubble, mask_Ned1)] \
         = np.linalg.inv(LHS[np.ix_(mask_CG_bubble, mask_CG_bubble)]) \
-        @ (RHS[np.ix_(mask_CG_bubble, mask_N1)] - LHS[mask_CG_bubble, :] @ Bogovskii_N1_face[:, mask_N1])
+        @ (RHS[np.ix_(mask_CG_bubble, mask_Ned1)] - LHS[mask_CG_bubble, :] @ Bogovskii_Ned1_face[:, mask_Ned1])
 
 
-    return Bogovskii_N1_face
+    return Bogovskii_Ned1_face
     #
     #
 def _map_DG_face(degree, variant):
@@ -310,24 +308,24 @@ def _map_DG_face(degree, variant):
         mesh = Mesh(coords)
 
     funspace_CG = FunctionSpace(mesh, "CG", degree, variant="equispaced")
-    funspace_N1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
+    funspace_Ned1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
     funspace_DG = FunctionSpace(mesh, "DG", degree-1, variant=variant)
-    mixspace_CG_N1 = MixedFunctionSpace([funspace_CG, funspace_N1])
+    mixspace_CG_Ned1 = MixedFunctionSpace([funspace_CG, funspace_Ned1])
 
     ndof_CG, ndof_CG_face, ndof_CG_edge, ndof_CG_vert = ndof_(funspace_CG)
-    ndof_N1, ndof_N1_face, ndof_N1_edge = ndof_(funspace_N1)
+    ndof_Ned1, ndof_Ned1_face, ndof_Ned1_edge = ndof_(funspace_Ned1)
     ndof_DG, ndof_DG_face = ndof_(funspace_DG)
 
     ref_map_CG = funspace_CG.cell_node_map().values[0]
-    ref_map_N1 = funspace_N1.cell_node_map().values[0]
+    ref_map_Ned1 = funspace_Ned1.cell_node_map().values[0]
     ref_map_DG = funspace_DG.cell_node_map().values[0]
     
-    ref_map_LHS = np.zeros(shape=(ndof_CG + ndof_N1), dtype=int)
+    ref_map_LHS = np.zeros(shape=(ndof_CG + ndof_Ned1), dtype=int)
     ref_map_LHS[:ndof_CG] = ref_map_CG
-    ref_map_LHS[ndof_CG:] = ref_map_N1 + ndof_CG
+    ref_map_LHS[ndof_CG:] = ref_map_Ned1 + ndof_CG
 
-    p0, u0 = TrialFunctions(mixspace_CG_N1)
-    p1, u1 = TestFunctions(mixspace_CG_N1)
+    p0, u0 = TrialFunctions(mixspace_CG_Ned1)
+    p1, u1 = TestFunctions(mixspace_CG_Ned1)
     q0 = TrialFunction(funspace_DG)
 
     LHS = npmat(
@@ -341,25 +339,25 @@ def _map_DG_face(degree, variant):
     mask_CG_bubble = np.zeros(shape=(ndof_CG), dtype=bool)
     mask_CG_bubble[ndof_CG - ndof_CG_face:] = 1
 
-    mask_N1_bubble = np.zeros(shape=(ndof_N1), dtype=bool)
-    mask_N1_bubble[ndof_N1 - ndof_N1_face:] = 1
+    mask_Ned1_bubble = np.zeros(shape=(ndof_Ned1), dtype=bool)
+    mask_Ned1_bubble[ndof_Ned1 - ndof_Ned1_face:] = 1
 
-    mask_LHS = np.zeros(shape=(ndof_CG + ndof_N1), dtype=bool)
+    mask_LHS = np.zeros(shape=(ndof_CG + ndof_Ned1), dtype=bool)
     mask_LHS[:ndof_CG] = mask_CG_bubble
-    mask_LHS[ndof_CG:] = mask_N1_bubble
+    mask_LHS[ndof_CG:] = mask_Ned1_bubble
 
     mask_DG = np.ones(shape=(ndof_DG), dtype=bool)
     if variant == "integral":
         mask_DG[0] = 0
 
-    Bogovskii_DG_face = np.zeros(shape=(ndof_N1, ndof_DG))
-    Bogovskii_DG_face[np.ix_(mask_N1_bubble, mask_DG)] \
+    Bogovskii_DG_face = np.zeros(shape=(ndof_Ned1, ndof_DG))
+    Bogovskii_DG_face[np.ix_(mask_Ned1_bubble, mask_DG)] \
         = (np.linalg.inv(LHS[np.ix_(mask_LHS, mask_LHS)]) @ RHS[np.ix_(mask_LHS, mask_DG)])[np.sum(mask_CG_bubble):, :]
 
     return Bogovskii_DG_face
     #
     #
-def _map_N1_tetrahedron(degree):
+def _map_Ned1_tetrahedron(degree):
     mesh = UnitTetrahedronMesh()
     (u, v, w) = SpatialCoordinate(mesh)
     V_coord = VectorFunctionSpace(mesh, "CG", 1, dim=3)
@@ -367,53 +365,53 @@ def _map_N1_tetrahedron(degree):
     mesh = Mesh(coords)
     
     funspace_CG = FunctionSpace(mesh, "CG", degree, variant="equispaced")
-    funspace_N1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
+    funspace_Ned1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
 
     ndof_CG, ndof_CG_tetrahedron, ndof_CG_face, ndof_CG_edge, ndof_CG_vert = ndof_(funspace_CG)
-    ndof_N1, ndof_N1_tetrahedron, ndof_N1_face, ndof_N1_edge = ndof_(funspace_N1)
+    ndof_Ned1, ndof_Ned1_tetrahedron, ndof_Ned1_face, ndof_Ned1_edge = ndof_(funspace_Ned1)
 
     ref_map_CG = funspace_CG.cell_node_map().values[0]
-    ref_map_N1 = funspace_N1.cell_node_map().values[0]
+    ref_map_Ned1 = funspace_Ned1.cell_node_map().values[0]
 
 
     p0 = TrialFunction(funspace_CG)
     p1 = TestFunction(funspace_CG)
-    u0 = TrialFunction(funspace_N1)
+    u0 = TrialFunction(funspace_Ned1)
 
     LHS = npmat(inner(grad(p0), grad(p1))*dx)[np.ix_(ref_map_CG, ref_map_CG)]
-    RHS = npmat(inner(u0, grad(p1))*dx)[np.ix_(ref_map_CG, ref_map_N1)]
+    RHS = npmat(inner(u0, grad(p1))*dx)[np.ix_(ref_map_CG, ref_map_Ned1)]
 
 
     mask_CG_bubble = np.zeros(shape=(ndof_CG), dtype=bool)
     mask_CG_bubble[ndof_CG - ndof_CG_tetrahedron:] = 1
 
     mask_CG = np.zeros(shape=(ndof_CG), dtype=bool)
-    mask_N1 = np.zeros(shape=(ndof_N1), dtype=bool)
+    mask_Ned1 = np.zeros(shape=(ndof_Ned1), dtype=bool)
 
-    Bogovskii_N1_face = _map_N1_face(degree)
-    Bogovskii_N1_tetrahedron = np.zeros(shape=(ndof_CG, ndof_N1))
+    Bogovskii_Ned1_face = _map_Ned1_face(degree)
+    Bogovskii_Ned1_tetrahedron = np.zeros(shape=(ndof_CG, ndof_Ned1))
 
-    for face_i, edges in _face_edges:
-        mask_CG[:] = 0; mask_N1[:] = 0
+    for face_i, edges in enumerate([(0, 1, 2), (0, 3, 4), (1, 3, 5), (2, 4, 5)]):
+        mask_CG[:] = 0; mask_Ned1[:] = 0
 
         for edge_i in edges:
             mask_CG[4 + edge_i * ndof_CG_edge: 4 + (edge_i + 1) * ndof_CG_edge] = 1
-            mask_N1[edge_i * ndof_N1_edge: (edge_i + 1) * ndof_N1_edge] = 1
+            mask_Ned1[edge_i * ndof_Ned1_edge: (edge_i + 1) * ndof_Ned1_edge] = 1
 
         mask_CG[4 + 6*ndof_CG_edge + face_i * ndof_CG_face: 4 + 6*ndof_CG_edge + (face_i + 1) * ndof_CG_face] = 1
-        mask_N1[6*ndof_N1_edge + face_i * ndof_N1_face: 6*ndof_N1_edge + (face_i + 1) * ndof_N1_face] = 1
+        mask_Ned1[6*ndof_Ned1_edge + face_i * ndof_Ned1_face: 6*ndof_Ned1_edge + (face_i + 1) * ndof_Ned1_face] = 1
 
-        Bogovskii_N1_tetrahedron[np.ix_(mask_CG, mask_N1)] = -sqrt(8) * Bogovskii_N1_face[3:, :]
+        Bogovskii_Ned1_tetrahedron[np.ix_(mask_CG, mask_Ned1)] = Bogovskii_Ned1_face[3:, :]
 
 
-    mask_N1[:] = 1
-    mask_N1[0: 3*ndof_N1_edge: ndof_N1_edge] = 0
+    mask_Ned1[:] = 1
+    mask_Ned1[0: 4*ndof_Ned1_edge: ndof_Ned1_edge] = 0
 
-    Bogovskii_N1_tetrahedron[np.ix_(mask_CG_bubble, mask_N1)] \
+    Bogovskii_Ned1_tetrahedron[np.ix_(mask_CG_bubble, mask_Ned1)] \
         = np.linalg.inv(LHS[np.ix_(mask_CG_bubble, mask_CG_bubble)]) \
-        @ (RHS[np.ix_(mask_CG_bubble, mask_N1)] - LHS[mask_CG_bubble, :] @ Bogovskii_N1_tetrahedron[:, mask_N1])
+        @ (RHS[np.ix_(mask_CG_bubble, mask_Ned1)] - LHS[mask_CG_bubble, :] @ Bogovskii_Ned1_tetrahedron[:, mask_Ned1])
 
-    return Bogovskii_N1_tetrahedron
+    return Bogovskii_Ned1_tetrahedron
     #
     #
 def _map_RT_tetrahedron(degree):
@@ -424,24 +422,24 @@ def _map_RT_tetrahedron(degree):
     mesh = Mesh(coords)
 
     funspace_CG = FunctionSpace(mesh, "CG", degree, variant="equispaced")
-    funspace_N1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
+    funspace_Ned1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
     funspace_RT = FunctionSpace(mesh, "RT", degree, variant="integral")
-    mixspace_CG_N1 = MixedFunctionSpace([funspace_CG, funspace_N1])
+    mixspace_CG_Ned1 = MixedFunctionSpace([funspace_CG, funspace_Ned1])
 
     ndof_CG, ndof_CG_tetrahedron, ndof_CG_face, ndof_CG_edge, ndof_CG_vert = ndof_(funspace_CG)
-    ndof_N1, ndof_N1_tetrahedron, ndof_N1_face, ndof_N1_edge = ndof_(funspace_N1)
+    ndof_Ned1, ndof_Ned1_tetrahedron, ndof_Ned1_face, ndof_Ned1_edge = ndof_(funspace_Ned1)
     ndof_RT, ndof_RT_tetrahedron, ndof_RT_face = ndof_(funspace_RT)
 
     ref_map_CG = funspace_CG.cell_node_map().values[0]
-    ref_map_N1 = funspace_N1.cell_node_map().values[0]
+    ref_map_Ned1 = funspace_Ned1.cell_node_map().values[0]
     ref_map_RT = funspace_RT.cell_node_map().values[0]
     
-    ref_map_LHS = np.zeros(shape=(ndof_CG + ndof_N1), dtype=int)
+    ref_map_LHS = np.zeros(shape=(ndof_CG + ndof_Ned1), dtype=int)
     ref_map_LHS[:ndof_CG] = ref_map_CG
-    ref_map_LHS[ndof_CG:] = ref_map_N1 + ndof_CG
+    ref_map_LHS[ndof_CG:] = ref_map_Ned1 + ndof_CG
 
-    p0, u0 = TrialFunctions(mixspace_CG_N1)
-    p1, u1 = TestFunctions(mixspace_CG_N1)
+    p0, u0 = TrialFunctions(mixspace_CG_Ned1)
+    p1, u1 = TestFunctions(mixspace_CG_Ned1)
     v0 = TrialFunction(funspace_RT)
 
     LHS = npmat(
@@ -455,31 +453,31 @@ def _map_RT_tetrahedron(degree):
     mask_CG_bubble = np.zeros(shape=(ndof_CG), dtype=bool)
     mask_CG_bubble[ndof_CG - ndof_CG_tetrahedron:] = 1
 
-    mask_N1_bubble = np.zeros(shape=(ndof_N1), dtype=bool)
-    mask_N1_bubble[ndof_N1 - ndof_N1_tetrahedron:] = 1
+    mask_Ned1_bubble = np.zeros(shape=(ndof_Ned1), dtype=bool)
+    mask_Ned1_bubble[ndof_Ned1 - ndof_Ned1_tetrahedron:] = 1
 
-    mask_LHS = np.zeros(shape=(ndof_CG + ndof_N1), dtype=bool)
+    mask_LHS = np.zeros(shape=(ndof_CG + ndof_Ned1), dtype=bool)
     mask_LHS[:ndof_CG] = mask_CG_bubble
-    mask_LHS[ndof_CG:] = mask_N1_bubble
+    mask_LHS[ndof_CG:] = mask_Ned1_bubble
 
-    mask_N1 = np.zeros(shape=(ndof_N1), dtype=bool)
+    mask_Ned1 = np.zeros(shape=(ndof_Ned1), dtype=bool)
     mask_RT = np.zeros(shape=(ndof_RT), dtype=bool)
 
     Bogovskii_DG_face = _map_DG_face(degree, variant="integral")
-    Bogovskii_RT_tetrahedron = np.zeros(shape=(ndof_N1, ndof_RT))
+    Bogovskii_RT_tetrahedron = np.zeros(shape=(ndof_Ned1, ndof_RT))
 
     for face_i in range(4):
-        mask_N1[:] = 0; mask_RT[:] = 0
+        mask_Ned1[:] = 0; mask_RT[:] = 0
 
-        mask_N1[6*ndof_N1_edge + face_i * ndof_N1_face: 6*ndof_N1_edge + (face_i + 1) * ndof_N1_face] = 1
+        mask_Ned1[6*ndof_Ned1_edge + face_i * ndof_Ned1_face: 6*ndof_Ned1_edge + (face_i + 1) * ndof_Ned1_face] = 1
         mask_RT[face_i * ndof_RT_face: (face_i + 1) * ndof_RT_face] = 1
 
-        Bogovskii_RT_tetrahedron[np.ix_(mask_N1, mask_RT)] = Bogovskii_DG_face[3*ndof_N1_edge:, :]
+        Bogovskii_RT_tetrahedron[np.ix_(mask_Ned1, mask_RT)] = Bogovskii_DG_face[3*ndof_Ned1_edge:, :]
 
     mask_RT[:] = 1
     mask_RT[0: 4*ndof_RT_face: ndof_RT_face] = 0
 
-    Bogovskii_RT_tetrahedron[np.ix_(mask_N1_bubble, mask_RT)] \
+    Bogovskii_RT_tetrahedron[np.ix_(mask_Ned1_bubble, mask_RT)] \
         = (np.linalg.inv(LHS[np.ix_(mask_LHS, mask_LHS)]) \
         @ (RHS[np.ix_(mask_LHS, mask_RT)] - LHS[mask_LHS, ndof_CG:] @ Bogovskii_RT_tetrahedron[:, mask_RT]))[np.sum(mask_CG_bubble):, :]
 
@@ -493,26 +491,26 @@ def _map_DG_tetrahedron(degree, variant):
     coords = Function(V_coord).interpolate(as_vector([u + 1/2 * v + 1/2 * w, sqrt(3)/2 * v + sqrt(3)/6 * w, sqrt(6)/3 * w]))
     mesh = Mesh(coords)
 
-    funspace_N1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
+    funspace_Ned1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
     funspace_RT = FunctionSpace(mesh, "RT", degree, variant="integral")
     funspace_DG = FunctionSpace(mesh, "DG", degree-1, variant=variant)
-    mixspace_N1_RT = MixedFunctionSpace([funspace_N1, funspace_RT])
+    mixspace_Ned1_RT = MixedFunctionSpace([funspace_Ned1, funspace_RT])
 
-    ndof_N1, ndof_N1_tetrahedron, ndof_N1_face, ndof_N1_edge = ndof_(funspace_N1)
+    ndof_Ned1, ndof_Ned1_tetrahedron, ndof_Ned1_face, ndof_Ned1_edge = ndof_(funspace_Ned1)
     ndof_RT, ndof_RT_tetrahedron, ndof_RT_face = ndof_(funspace_RT)
     ndof_DG, ndof_DG_tetrahedron = ndof_(funspace_DG)
 
 
-    ref_map_N1 = funspace_N1.cell_node_map().values[0]
+    ref_map_Ned1 = funspace_Ned1.cell_node_map().values[0]
     ref_map_RT = funspace_RT.cell_node_map().values[0]
     ref_map_DG = funspace_DG.cell_node_map().values[0]
     
-    ref_map_LHS = np.zeros(shape=(ndof_N1 + ndof_RT), dtype=int)
-    ref_map_LHS[:ndof_N1] = ref_map_N1
-    ref_map_LHS[ndof_N1:] = ref_map_RT + ndof_N1
+    ref_map_LHS = np.zeros(shape=(ndof_Ned1 + ndof_RT), dtype=int)
+    ref_map_LHS[:ndof_Ned1] = ref_map_Ned1
+    ref_map_LHS[ndof_Ned1:] = ref_map_RT + ndof_Ned1
 
-    u0, v0 = TrialFunctions(mixspace_N1_RT)
-    u1, v1 = TestFunctions(mixspace_N1_RT)
+    u0, v0 = TrialFunctions(mixspace_Ned1_RT)
+    u1, v1 = TestFunctions(mixspace_Ned1_RT)
     q0 = TrialFunction(funspace_DG)
 
     LHS = npmat(
@@ -523,15 +521,15 @@ def _map_DG_tetrahedron(degree, variant):
     RHS = npmat(inner(q0, div(v1))*dx)[np.ix_(ref_map_LHS, ref_map_DG)]
 
 
-    mask_N1_bubble = np.zeros(shape=(ndof_N1), dtype=bool)
-    mask_N1_bubble[ndof_N1 - ndof_N1_tetrahedron:] = 1
+    mask_Ned1_bubble = np.zeros(shape=(ndof_Ned1), dtype=bool)
+    mask_Ned1_bubble[ndof_Ned1 - ndof_Ned1_tetrahedron:] = 1
 
     mask_RT_bubble = np.zeros(shape=(ndof_RT), dtype=bool)
     mask_RT_bubble[ndof_RT - ndof_RT_tetrahedron:] = 1
 
-    mask_LHS = np.zeros(shape=(ndof_N1 + ndof_RT), dtype=bool)
-    mask_LHS[:ndof_N1] = mask_N1_bubble
-    mask_LHS[ndof_N1:] = mask_RT_bubble
+    mask_LHS = np.zeros(shape=(ndof_Ned1 + ndof_RT), dtype=bool)
+    mask_LHS[:ndof_Ned1] = mask_Ned1_bubble
+    mask_LHS[ndof_Ned1:] = mask_RT_bubble
 
     mask_DG = np.ones(shape=(ndof_DG), dtype=bool)
     if variant == "integral":
@@ -539,7 +537,7 @@ def _map_DG_tetrahedron(degree, variant):
 
     Bogovskii_DG_tetrahedron = np.zeros(shape=(ndof_RT, ndof_DG))
     Bogovskii_DG_tetrahedron[np.ix_(mask_RT_bubble, mask_DG)] \
-        = (np.linalg.inv(LHS[np.ix_(mask_LHS, mask_LHS)]) @ RHS[np.ix_(mask_LHS, mask_DG)])[np.sum(mask_N1_bubble):, :]
+        = (np.linalg.inv(LHS[np.ix_(mask_LHS, mask_LHS)]) @ RHS[np.ix_(mask_LHS, mask_DG)])[np.sum(mask_Ned1_bubble):, :]
 
     return sqrt(2) * Bogovskii_DG_tetrahedron
     #
@@ -550,81 +548,52 @@ def _map_DG_tetrahedron(degree, variant):
 
 
 if __name__ == "__main__":
-    #np.set_printoptions(precision=2, linewidth=125, suppress=True)
+    np.set_printoptions(precision=2, linewidth=125, suppress=True)
     _BOGOVSKII_DEBUG_ENABLE = True
 
     #_debug_eval_tetrahedron_dof(2)
 
     degree = 3
-    B = _map_RT_tetrahedron(degree)
 
     mesh = UnitTetrahedronMesh()
     (x, y, z) = SpatialCoordinate(mesh)
 
+
     funspace_CG = FunctionSpace(mesh, "CG", degree, variant="equispaced")
-    funspace_N1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
+    funspace_Ned1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
     funspace_RT = FunctionSpace(mesh, "RT", degree, variant="integral")
     funspace_DG = FunctionSpace(mesh, "DG", degree-1, variant="spectral")
 
     ref_map_CG = funspace_CG.cell_node_map().values[0]
-    ref_map_N1 = funspace_N1.cell_node_map().values[0]
+    ref_map_Ned1 = funspace_Ned1.cell_node_map().values[0]
     ref_map_RT = funspace_RT.cell_node_map().values[0]
     ref_map_DG = funspace_DG.cell_node_map().values[0]
 
     ndof_CG, ndof_CG_tetrahedron, ndof_CG_face, ndof_CG_edge, ndof_CG_vert = ndof_(funspace_CG)
-    ndof_N1, ndof_N1_tetrahedron, ndof_N1_face, ndof_N1_edge = ndof_(funspace_N1)
+    ndof_Ned1, ndof_Ned1_tetrahedron, ndof_Ned1_face, ndof_Ned1_edge = ndof_(funspace_Ned1)
     ndof_RT, ndof_RT_tetrahedron, ndof_RT_face = ndof_(funspace_RT)
     ndof_DG, ndof_DG_tetrahedron = ndof_(funspace_DG)
 
 
-    funspace_RT1 = FunctionSpace(mesh, "RT", 1, variant="integral(6)")
+    B = _map_Ned1_tetrahedron(degree)
 
-    u0 = Function(funspace_N1).interpolate(as_vector([sin(pi * (x)), sin(pi/2 * (x)), sin(pi/4 * (x))]))
-    If = Function(funspace_RT1).interpolate(curl(u0))
-    f = Function(funspace_RT).interpolate(curl(u0) - If)
+    funspace_Ned1_1 = FunctionSpace(mesh, "N1curl", 1, variant="integral(6)")
 
-    u = Function(funspace_N1)
-    u.dat.data[ref_map_N1] = B @ f.dat.data[ref_map_RT]
-    du = Function(funspace_RT).interpolate(curl(u))
+    u0 = Function(funspace_CG).interpolate(sin(x))
+    If = Function(funspace_Ned1_1).interpolate(grad(u0))
+    f = Function(funspace_Ned1).interpolate(grad(u0) - If)
 
-    print(f.dat.data[ref_map_RT][:ndof_RT - ndof_RT_tetrahedron])
-    print(du.dat.data[ref_map_RT][:ndof_RT - ndof_RT_tetrahedron])
+    u = Function(funspace_CG)
+    u.dat.data[ref_map_CG] = B @ f.dat.data[ref_map_Ned1]
+    du = Function(funspace_Ned1).interpolate(grad(u))
+
+    print(f.dat.data[ref_map_Ned1][:6*ndof_Ned1_edge])
+    print(du.dat.data[ref_map_Ned1][:6*ndof_Ned1_edge])
     print()
-    print(f.dat.data[ref_map_RT][ndof_RT - ndof_RT_tetrahedron:])
-    print(du.dat.data[ref_map_RT][ndof_RT - ndof_RT_tetrahedron:])
+    print(f.dat.data[ref_map_Ned1][6*ndof_Ned1_edge:ndof_Ned1 - ndof_Ned1_tetrahedron])
+    print(du.dat.data[ref_map_Ned1][6*ndof_Ned1_edge:ndof_Ned1 - ndof_Ned1_tetrahedron])
+    print()
+    print(f.dat.data[ref_map_Ned1][ndof_Ned1 - ndof_Ned1_tetrahedron:])
+    print(du.dat.data[ref_map_Ned1][ndof_Ned1 - ndof_Ned1_tetrahedron:])
     print()
     print(np.max(np.abs(f.dat.data[:] - du.dat.data[:])))
-
-if False:
-
-    f = Function(funspace_N1).interpolate(as_vector([sin(pi * y) * sin(pi * (1-x-y)), sin(pi/2 * x) * sin(pi/2 * (1-x-y))]))
-    q = Function(funspace_DG).interpolate(sin(x-y))
-
-
-    u = Function(funspace_N1)
-    u.dat.data[ref_map_N1] = B @ q.dat.data[ref_map_DG]
-
-
-    ndof_N1 = funspace_N1.finat_element.space_dimension()
-    ndof_DG = funspace_DG.finat_element.space_dimension()
-
-    domain = f"{{[i,j]: 0 <= i < {ndof_N1} and 0 <= j < {ndof_DG}}}"
-    instructions = f"""
-    for i
-        a[i] = 0.0
-        for j
-            a[i] = a[i] + T[i*{ndof_DG} + j] * b[j]
-        end
-    end
-    """
-
-    par_loop(
-        (domain, instructions),
-        dx,
-        {"T": (Constant(B), READ), "b": (q, READ), "a": (u, WRITE)}
-    )
-
-
-    curl_u = Function(funspace_DG).interpolate(curl(u))
-    print(curl_u.dat.data[:])
-    print(q.dat.data[:]) 
