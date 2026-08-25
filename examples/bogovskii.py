@@ -753,7 +753,7 @@ def _map_HDiv_tetrahedron(family, degree, variant):
         mask_HCurl[6*ndof_HCurl_edge + face_i * ndof_HCurl_face: 6*ndof_HCurl_edge + (face_i + 1) * ndof_HCurl_face] = 1
         mask_HDiv[face_i * ndof_HDiv_face: (face_i + 1) * ndof_HDiv_face] = 1
 
-        Bogovskii_HDiv_tetrahedron[np.ix_(mask_HCurl, mask_HDiv)] = Bogovskii_L2_face[3*ndof_HCurl_edge:, :]
+        Bogovskii_HDiv_tetrahedron[np.ix_(mask_HCurl, mask_HDiv)] = -sqrt(8) * Bogovskii_L2_face[3*ndof_HCurl_edge:, :]
 
     mask_HDiv[:] = 1
     mask_HDiv[0: 4*ndof_HDiv_face: ndof_HDiv_face] = 0
@@ -823,59 +823,4 @@ def _map_L2_tetrahedron(family, degree, variant):
     return sqrt(2) * Bogovskii_L2_tetrahedron
     #
     #
-
-
-
-
-
-if __name__ == "__main__":
-    #np.set_printoptions(precision=2, linewidth=125, suppress=True)
-    _BOGOVSKII_DEBUG_ENABLE = True
-
-    #_debug_eval_tetrahedron_dof(2)
-
-    degree = 4
-
-    mesh = UnitTetrahedronMesh()
-    (x, y) = SpatialCoordinate(mesh)
-
-
-    funspace_CG = FunctionSpace(mesh, "CG", degree, variant="equispaced")
-    funspace_Ned1 = FunctionSpace(mesh, "N1curl", degree, variant="integral")
-    funspace_RT = FunctionSpace(mesh, "RT", degree, variant="integral")
-    funspace_DG = FunctionSpace(mesh, "DG", degree-1, variant="spectral")
-
-    ref_map_CG = funspace_CG.cell_node_map().values[0]
-    ref_map_Ned1 = funspace_Ned1.cell_node_map().values[0]
-    ref_map_RT = funspace_RT.cell_node_map().values[0]
-    ref_map_DG = funspace_DG.cell_node_map().values[0]
-
-    ndof_CG, ndof_CG_tetrahedron, ndof_CG_face, ndof_CG_edge, ndof_CG_vert = ndof_(funspace_CG)
-    ndof_Ned1, ndof_Ned1_tetrahedron, ndof_Ned1_face, ndof_Ned1_edge = ndof_(funspace_Ned1)
-    ndof_RT, ndof_RT_tetrahedron, ndof_RT_face = ndof_(funspace_RT)
-    ndof_DG, ndof_DG_tetrahedron = ndof_(funspace_DG)
     
-
-    B = bogovskii_map(funspace_RT, funspace_DG)
-
-    funspace_RT_1 = FunctionSpace(mesh, "RT", 1, variant="integral(6)")
-
-    u0 = Function(funspace_Ned1).interpolate(as_vector([sin(x), sin(2*x)]))
-    If = Function(funspace_RT_1).interpolate(curl(u0))
-    f = Function(funspace_RT).interpolate(curl(u0) - If)
-
-    u = Function(funspace_Ned1)
-    u.dat.data[ref_map_Ned1] = B @ f.dat.data[ref_map_RT]
-    du = Function(funspace_RT).interpolate(curl(u))
-
-
-    print(f.dat.data[ref_map_Ned1][:6*ndof_Ned1_edge])
-    print(du.dat.data[ref_map_Ned1][:6*ndof_Ned1_edge])
-    print()
-    print(f.dat.data[ref_map_Ned1][6*ndof_Ned1_edge:ndof_Ned1 - ndof_Ned1_tetrahedron])
-    print(du.dat.data[ref_map_Ned1][6*ndof_Ned1_edge:ndof_Ned1 - ndof_Ned1_tetrahedron])
-    print()
-    print(f.dat.data[ref_map_Ned1][ndof_Ned1 - ndof_Ned1_tetrahedron:])
-    print(du.dat.data[ref_map_Ned1][ndof_Ned1 - ndof_Ned1_tetrahedron:])
-    print()
-    print(np.max(np.abs(f.dat.data[:] - du.dat.data[:])))

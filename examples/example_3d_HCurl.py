@@ -20,16 +20,16 @@ funspace_CG_1 = FunctionSpace(mesh, "CG", 1, variant="equispaced")
 funspace_Ned1_1 = FunctionSpace(mesh, "N1curl", 1, variant=f"integral({quadrature_degree})")
 
 ndof_CG = funspace_CG.finat_element.space_dimension()
-ndof_Ned = funspace_Ned2.finat_element.space_dimension()
+ndof_Ned2 = funspace_Ned2.finat_element.space_dimension()
 
 B = Constant(bogovskii_map(funspace_Ned2, funspace_CG))
 
-domain = f"{{[i,j]: 0 <= i < {ndof_CG} and 0 <= j < {ndof_Ned}}}"
+domain = f"{{[i,j]: 0 <= i < {ndof_CG} and 0 <= j < {ndof_Ned2}}}"
 instructions = f"""
 for i
     a[i] = 0.0
     for j
-        a[i] = a[i] + T[i*{ndof_Ned} + j] * b[j]
+        a[i] = a[i] + T[i*{ndof_Ned2} + j] * b[j]
     end
 end
 """

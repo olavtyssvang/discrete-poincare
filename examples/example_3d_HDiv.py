@@ -14,7 +14,7 @@ degree = 3
 quadrature_degree = 8
 
 funspace_Ned1 = FunctionSpace(mesh, "N1curl", degree, variant=f"integral({quadrature_degree})")
-funspace_RT = FunctionSpace(mesh, "RT", degree, variant=f"integral({quadrature_degree})")
+funspace_BDM = FunctionSpace(mesh, "BDM", degree, variant=f"integral({quadrature_degree})")
 
 funspace_CG_1 = FunctionSpace(mesh, "CG", 1, variant="equispaced")
 funspace_Ned1_1 = FunctionSpace(mesh, "N1curl", 1, variant=f"integral({quadrature_degree})")
@@ -22,22 +22,22 @@ funspace_RT_1 = FunctionSpace(mesh, "RT", 1, variant=f"integral({quadrature_degr
 mixspace_CG_Ned1_1 = MixedFunctionSpace([funspace_CG_1, funspace_Ned1_1])
 
 ndof_Ned1 = funspace_Ned1.finat_element.space_dimension()
-ndof_RT = funspace_RT.finat_element.space_dimension()
+ndof_BDM = funspace_BDM.finat_element.space_dimension()
 
-B = Constant(bogovskii_map(funspace_RT, funspace_Ned1))
+B = Constant(bogovskii_map(funspace_BDM, funspace_Ned1))
 
-domain = f"{{[i,j]: 0 <= i < {ndof_Ned1} and 0 <= j < {ndof_RT}}}"
+domain = f"{{[i,j]: 0 <= i < {ndof_Ned1} and 0 <= j < {ndof_BDM}}}"
 instructions = f"""
 for i
     a[i] = 0.0
     for j
-        a[i] = a[i] + T[i*{ndof_RT} + j] * b[j]
+        a[i] = a[i] + T[i*{ndof_BDM} + j] * b[j]
     end
 end
 """
 
 f = Function(funspace_Ned1).interpolate(as_vector([sin(pi * (1-x-y-z)), sin(pi/2 * (1-x-y-z)), sin(pi/4 * (1-x-y-z))]))
-q = Function(funspace_RT).interpolate(curl(f))
+q = Function(funspace_BDM).interpolate(curl(f))
 
 
 p0, u0 = TrialFunctions(mixspace_CG_Ned1_1)
@@ -53,7 +53,7 @@ solve(a==L, PIq_mixed)
 _, PIq = PIq_mixed.subfunctions
 
 
-Mq = Function(funspace_RT).interpolate(q - Iq)
+Mq = Function(funspace_BDM).interpolate(q - Iq)
 PMq = Function(funspace_Ned1)
 par_loop(
     (domain, instructions),
@@ -65,7 +65,7 @@ par_loop(
 
 print(Mq.dat.data[:])
 
-v = project(curl(PMq), funspace_RT)
+v = project(curl(PMq), funspace_BDM)
 print(v.dat.data[:])
 
 

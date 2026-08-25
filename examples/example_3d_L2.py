@@ -18,7 +18,7 @@ funspace_DG = FunctionSpace(mesh, "DG", degree-1, variant=f"spectral")
 
 funspace_Ned1_1 = FunctionSpace(mesh, "N1curl", 1, variant=f"integral({quadrature_degree})")
 funspace_RT_1 = FunctionSpace(mesh, "RT", 1, variant=f"integral({quadrature_degree})")
-funspace_DG_0 = FunctionSpace(mesh, "DG", 0, variant=f"spectral")
+funspace_DG_0 = FunctionSpace(mesh, "DG", 0, variant=f"integral({quadrature_degree})")
 mixspace_Ned1_RT_1 = MixedFunctionSpace([funspace_Ned1_1, funspace_RT_1])
 
 ndof_RT = funspace_RT.finat_element.space_dimension()
@@ -44,7 +44,7 @@ p0, u0 = TrialFunctions(mixspace_Ned1_RT_1)
 p1, u1 = TestFunctions(mixspace_Ned1_RT_1)
 PIq_mixed = Function(mixspace_Ned1_RT_1)
 
-a = (inner(curl(p0), u1)*dx - inner(div(u0), div(u1))*dx + inner(p0, p1)*dx - inner(u0, curl(p1))*dx)
+a = (inner(curl(p0), u1)*dx + inner(div(u0), div(u1))*dx + inner(p0, p1)*dx - inner(u0, curl(p1))*dx)
 
 
 Iq = Function(funspace_DG_0).interpolate(q) 
