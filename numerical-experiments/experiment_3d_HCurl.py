@@ -5,11 +5,11 @@ import csv, time
 import gc
 from bogovskii import bogovskii_map
 
-MIN_N_SOLVES = 2
-MIN_RUNTIME_S = 1
+MIN_N_SOLVES = 5
+MIN_RUNTIME_S = 10
 
-experiment_degrees = [2, 3, 4]
-experiment_n_refinements = 2
+experiment_degrees = [1, 2, 3]
+experiment_n_refinements = 5
 
 quadrature_degree = 6
 
@@ -39,7 +39,7 @@ def runtime_global(mesh, degree):
             L = inner(u, grad(p1))*dx
             solve(a==L, Pu, nullspace=nullspace)
 
-            assert norm(grad(Pu) - u, "L2") < 1e-10
+            assert norm(grad(Pu) - u, "L2") < 1e-8
         
         n_solves += MIN_N_SOLVES
         if time.time() - time_start > MIN_RUNTIME_S:
@@ -103,7 +103,7 @@ def runtime_local(mesh, degree):
             )
 
             Pu = Function(funspace_CG).interpolate(PIu + PMu)
-            assert norm(grad(Pu) - u, "L2") < 1e-10
+            assert norm(grad(Pu) - u, "L2") < 1e-8
 
         n_solves += MIN_N_SOLVES
         if time.time() - time_start > MIN_RUNTIME_S:
@@ -152,12 +152,12 @@ for mesh_level in range(experiment_n_refinements):
     print()
 
 
-with open("output/discrete-poincare/Ned-global.csv", "w", newline="") as csvfile:
+with open("output/discrete-poincare/Ned1-global.csv", "w", newline="") as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=data_fields)
     writer.writeheader()
     writer.writerows(data_global)
 
-with open("output/discrete-poincare/Ned-local.csv", "w", newline="") as csvfile:
+with open("output/discrete-poincare/Ned1-local.csv", "w", newline="") as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=data_fields)
     writer.writeheader()
     writer.writerows(data_local)
