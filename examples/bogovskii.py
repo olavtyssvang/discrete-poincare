@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.sparse as sp
 from firedrake import *
+import ufl
 
 
 _BOGOVSKII_DEBUG_ENABLE = False
@@ -25,7 +26,7 @@ def bogovskii_map(funspace_from, funspace_to):
     mesh = funspace_from.mesh()
     assert mesh is funspace_to.mesh(), "Mesh is ambiguous."
 
-    dim = mesh.topological_dimension()
+    dim = mesh.topological_dimension
     from_space, from_family, from_degree, from_variant = _constructor_args(funspace_from)
     to_space, to_family, to_degree, to_variant = _constructor_args(funspace_to)
 

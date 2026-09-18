@@ -8,7 +8,7 @@ from bogovskii import bogovskii_map
 MIN_N_SOLVES = 5
 MIN_RUNTIME_S = 10
 
-experiment_degrees = [1, 2, 3]
+experiment_degrees = [2, 3]
 experiment_n_refinements = 4
 
 quadrature_degree = 6
