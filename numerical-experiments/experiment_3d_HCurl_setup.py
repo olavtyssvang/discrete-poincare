@@ -47,10 +47,12 @@ def runtime_global(mesh, degree):
 
         L = inner(u, grad(p1))*dx
         solve(a==L, Pu, nullspace=nullspace, solver_parameters=solver_parameters)
+        return u, Pu
 
 
     # warm up
-    benchmark()
+    u, Pu = benchmark()
+    assert norm(grad(Pu) - u, "L2") / norm(u, "L2") < 1e-8
 
     # run benchmarks
     n_solves = 0
@@ -141,10 +143,12 @@ def runtime_local(mesh, degree):
         )
 
         Pu.interpolate(PIu + PMu)
+        return u, Pu
 
     
     # warm up
-    benchmark()
+    u, Pu = benchmark()
+    assert norm(grad(Pu) - u, "L2") / norm(u, "L2") < 1e-8
 
     # run benchmarks
     n_solves = 0
@@ -184,13 +188,12 @@ data_local = []
 data_fields = ["mesh_id", "mesh_size", "polynomial_degree", "number_of_dof", "mean_runtime", "median_runtime", "minimum_runtime"]
 
 time_start = perf_counter()
-for mesh_level in range(1, experiment_n_refinements):
+for mesh_level in range(experiment_n_refinements):
 
     print(f"====   Mesh level{mesh_level:3}  ====")
 
     shape = Box(Pnt(0.0, 0.0, 0.0), Pnt(1.0, 1.0, 1.0))
     geo = OCCGeometry(shape)
-
     ngmesh = geo.GenerateMesh(maxh=1.0/(2**mesh_level))
     mesh = Mesh(ngmesh)
 

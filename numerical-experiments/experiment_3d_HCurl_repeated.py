@@ -48,11 +48,14 @@ def runtime_global(mesh, degree):
         f.dat.data[:] = np.random.randn(funspace_CG.dim())
         u.interpolate(grad(f))
 
+        Pu.assign(0)
         solver.solve()
+
+        return u, Pu
 
 
     # warm up
-    benchmark()
+    u, Pu = benchmark()
     assert norm(grad(Pu) - u, "L2") / norm(u, "L2") < 1e-8
 
     # run benchmarks
@@ -134,6 +137,7 @@ def runtime_local(mesh, degree):
         u.interpolate(grad(f))
         Iu.interpolate(u)
 
+        PIu.assign(0)
         solver.solve()
 
         Mu.interpolate(u - Iu)
@@ -144,10 +148,11 @@ def runtime_local(mesh, degree):
         )
 
         Pu.interpolate(PIu + PMu)
+        return u, Pu
 
     
     # warm up
-    benchmark()
+    u, Pu = benchmark()
     assert norm(grad(Pu) - u, "L2") / norm(u, "L2") < 1e-8
 
     # run benchmarks
@@ -194,7 +199,6 @@ for mesh_level in range(experiment_n_refinements):
 
     shape = Box(Pnt(0.0, 0.0, 0.0), Pnt(1.0, 1.0, 1.0))
     geo = OCCGeometry(shape)
-
     ngmesh = geo.GenerateMesh(maxh=1.0/(2**mesh_level))
     mesh = Mesh(ngmesh)
 
