@@ -1,17 +1,27 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from firedrake import *
 import csv, time
 import gc
 from bogovskii import bogovskii_map
 
-MIN_N_SOLVES = 5
-MIN_RUNTIME_S = 10
+MIN_BATCHTIME_S = 0.1 
+MIN_N_BATCHES = 9
+MIN_RUNTIME_S = 1.0
 
 experiment_degrees = [2, 3]
-experiment_n_refinements = 4
+experiment_n_refinements = 3
 
-quadrature_degree = 6
+quadrature_degree = 4
+
+
+solver_parameters = {
+    "ksp_type": "cg",
+    "pc_type": "hypre",
+    "pc_hypre_type": "boomeramg",
+    "ksp_rtol": 1e-10,
+    "ksp_atol": 1e-12,
+    "ksp_max_it": 1000,
+}
 
 
 def runtime_global(mesh, degree):
@@ -28,21 +38,23 @@ def runtime_global(mesh, degree):
 
     a = (inner(grad(p0), u1)*dx + inner(curl(u0), curl(u1))*dx + inner(p0, p1)*dx - inner(u0, grad(p1))*dx)
 
+    def benchmark():
+        f.dat.data[:] = np.random.rand(funspace_Ned1.dim())
+        v = Function(funspace_RT).interpolate(curl(f))
+
+        L = inner(v, curl(u1))*dx
+        solve(a==L, Pv_mixed)
+
+        _, Pv = Pv_mixed.subfunctions
+        assert norm(curl(Pv) - v, "L2") < 1e-8
+
 
     time_start = time.time()
     
     n_solves = 0
     while True:
         for i in range(MIN_N_SOLVES):
-            f.dat.data[:] = np.random.rand(funspace_Ned1.dim())
-            v = Function(funspace_RT).interpolate(curl(f))
 
-            L = inner(v, curl(u1))*dx
-            solve(a==L, Pv_mixed)
-
-            _, Pv = Pv_mixed.subfunctions
-            assert norm(curl(Pv) - v, "L2") < 1e-8
-        
         n_solves += MIN_N_SOLVES
         if time.time() - time_start > MIN_RUNTIME_S:
             break
@@ -84,6 +96,8 @@ def runtime_local(mesh, degree):
         end
     end
     """
+
+    def benchmark()
 
 
     time_start = time.time()

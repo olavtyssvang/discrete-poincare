@@ -48,7 +48,11 @@ nullspace = VectorSpaceBasis(constant=True, comm=COMM_WORLD)
 
 Iu = Function(funspace_Ned1_1).interpolate(u) 
 L = inner(Iu, grad(p1))*dx
-solve(a==L, PIu, nullspace=nullspace)
+solve(a==L, PIu, nullspace=nullspace, solver_parameters={
+        "ksp_converged_reason": None,
+        "ksp_monitor": None,
+        "snes_converged_reason": None,
+    },)
 
 Mu = Function(funspace_Ned2).interpolate(u - Iu)
 PMu = Function(funspace_CG)

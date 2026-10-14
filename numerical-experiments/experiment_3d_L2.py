@@ -6,7 +6,7 @@ import gc
 from bogovskii import bogovskii_map
 
 MIN_N_SOLVES = 5
-MIN_RUNTIME_S = 10
+MIN_RUNTIME_S = 2
 
 experiment_degrees = [2, 3]
 experiment_n_refinements = 4
