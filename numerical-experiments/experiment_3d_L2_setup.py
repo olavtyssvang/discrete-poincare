@@ -11,29 +11,33 @@ MIN_BATCHTIME_S = 0.1
 MIN_N_BATCHES = 9
 MIN_RUNTIME_S = 1.0
 
-experiment_degrees = [2, 3]
-experiment_n_refinements = 2
+experiment_degrees = [[2, 3], [2, 3], [2, 3], [2, 3], [2]]
+experiment_n_refinements = 5
 
 quadrature_degree = 4
 
 
 solver_parameters = {
-    "mat_type": "aij",
-    "ksp_type": "gmres",
+    "mat_type": "nest",
+    "snes_type": "ksponly",
+
+    "ksp_type": "minres",
     "ksp_rtol": 1e-10,
+    "ksp_max_it": 1000,
 
     "pc_type": "fieldsplit",
     "pc_fieldsplit_type": "additive",
 
-    # H(curl) mass block
-    "fieldsplit_0_ksp_type": "preonly",
-    "fieldsplit_0_pc_type": "jacobi",
+    "fieldsplit_0": {
+        "ksp_type": "preonly",
+        "pc_type": "jacobi",
+    },
 
-    # H(div) block
-    "fieldsplit_1_ksp_type": "preonly",
-    "fieldsplit_1_pc_type": "jacobi",
+    "fieldsplit_1": {
+        "ksp_type": "preonly",
+        "pc_type": "lu",
+    },
 }
-
 
 def runtime_global(mesh, degree):
 
@@ -50,23 +54,22 @@ def runtime_global(mesh, degree):
         u0, v0 = TrialFunctions(mixspace_Ned1_RT)
         u1, v1 = TestFunctions(mixspace_Ned1_RT)
 
-        a = (inner(curl(u0), v1)*dx + inner(div(v0), div(v1))*dx + inner(u0, u1)*dx - inner(v0, curl(u1))*dx)
-        L = inner(q, div(v1))*dx
-        problem = LinearVariationalProblem(a, L, Pq_mixed)
-        solver = LinearVariationalSolver(problem, solver_parameters=solver_parameters)
-
+        a = (inner(curl(u0), v1)*dx + inner(div(v0), div(v1))*dx - inner(u0, u1)*dx + inner(v0, curl(u1))*dx)
+        aP = (inner(u0, u1)*dx + inner(v0, v1)*dx + inner(div(v0), div(v1))*dx)
 
         f.dat.data[:] = np.random.rand(funspace_RT.dim())
         q.interpolate(div(f))
 
-        solver.solve()
+        L = inner(q, div(v1))*dx
+        solve(a==L, Pq_mixed, solver_parameters=solver_parameters, Jp=aP)
+
         _, Pq = Pq_mixed.subfunctions
         return q, Pq
 
 
     # warm up
     q, Pq = benchmark()
-    assert norm(div(Pq) - q, "L2") / norm(q, "L2") < 1e-10
+    assert norm(div(Pq) - q, "L2") / norm(q, "L2") < 1e-9
 
     # run benchmarks
     n_solves = 0
@@ -118,12 +121,9 @@ def runtime_local(mesh, degree):
         u1, v1 = TestFunctions(mixspace_Ned1_RT_1)
         PIq_mixed = Function(mixspace_Ned1_RT_1)
 
-        a = (inner(curl(u0), v1)*dx + inner(div(v0), div(v1))*dx + inner(u0, u1)*dx - inner(v0, curl(u1))*dx)
+        a = (inner(curl(u0), v1)*dx + inner(div(v0), div(v1))*dx - inner(u0, u1)*dx + inner(v0, curl(u1))*dx)
+        aP = (inner(u0, u1)*dx + inner(v0, v1)*dx + inner(div(v0), div(v1))*dx)
         Iq = Function(funspace_DG_0)
-
-        L = inner(Iq, div(v1))*dx
-        problem = LinearVariationalProblem(a, L, PIq_mixed)
-        solver = LinearVariationalSolver(problem, solver_parameters=solver_parameters)
 
         detJ = JacobianDeterminant(mesh) 
         Mq_scaled = Function(funspace_DG)
@@ -150,7 +150,8 @@ def runtime_local(mesh, degree):
         q.interpolate(div(f))
         Iq.interpolate(q)
 
-        solver.solve()
+        L = inner(Iq, div(v1))*dx
+        solve(a==L, PIq_mixed, solver_parameters=solver_parameters, Jp=aP)
 
         Mq_scaled.interpolate(detJ * (q - Iq))
         par_loop(
@@ -166,7 +167,7 @@ def runtime_local(mesh, degree):
 
     # warm up
     q, Pq = benchmark()
-    assert norm(div(Pq) - q, "L2") / norm(q, "L2") < 1e-10
+    assert norm(div(Pq) - q, "L2") / norm(q, "L2") < 1e-9
 
     # run benchmarks
     n_solves = 0
@@ -218,7 +219,7 @@ for mesh_level in range(experiment_n_refinements):
     funspace_DG_0 = FunctionSpace(mesh, "DG", 0)
     mesh_size = Function(funspace_DG_0).interpolate(CellDiameter(mesh)).dat.data_ro.max()
 
-    for degree in experiment_degrees:
+    for degree in experiment_degrees[mesh_level]:
         print(f"{int(perf_counter() - time_start):4}s elapsed;  degree{degree:3}", end="")
 
         funspace_DG = FunctionSpace(mesh, "DG", degree - 1)

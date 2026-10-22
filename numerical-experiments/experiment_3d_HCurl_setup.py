@@ -11,8 +11,8 @@ MIN_BATCHTIME_S = 0.1
 MIN_N_BATCHES = 9
 MIN_RUNTIME_S = 1.0
 
-experiment_degrees = [2, 3]
-experiment_n_refinements = 4
+experiment_degrees = [[2, 3], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3], [2]]
+experiment_n_refinements = 7
 
 quadrature_degree = 4
 
@@ -22,8 +22,7 @@ solver_parameters = {
     "pc_type": "hypre",
     "pc_hypre_type": "boomeramg",
     "ksp_rtol": 1e-10,
-    "ksp_atol": 1e-12,
-    "ksp_max_it": 1000,
+    "ksp_max_it": 100,
 }
 
 def runtime_global(mesh, degree):
@@ -52,7 +51,7 @@ def runtime_global(mesh, degree):
 
     # warm up
     u, Pu = benchmark()
-    assert norm(grad(Pu) - u, "L2") / norm(u, "L2") < 1e-8
+    assert norm(grad(Pu) - u, "L2") / norm(u, "L2") < 1e-9
 
     # run benchmarks
     n_solves = 0
@@ -148,7 +147,7 @@ def runtime_local(mesh, degree):
     
     # warm up
     u, Pu = benchmark()
-    assert norm(grad(Pu) - u, "L2") / norm(u, "L2") < 1e-8
+    assert norm(grad(Pu) - u, "L2") / norm(u, "L2") < 1e-9
 
     # run benchmarks
     n_solves = 0
@@ -200,7 +199,7 @@ for mesh_level in range(experiment_n_refinements):
     funspace_DG_0 = FunctionSpace(mesh, "DG", 0)
     mesh_size = Function(funspace_DG_0).interpolate(CellDiameter(mesh)).dat.data_ro.max()
 
-    for degree in experiment_degrees:
+    for degree in experiment_degrees[mesh_level]:
         print(f"{int(perf_counter() - time_start):4}s elapsed;  degree{degree:3}", end="")
 
         funspace_Ned1 = FunctionSpace(mesh, "N1curl", degree)

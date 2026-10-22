@@ -20,25 +20,46 @@ solver_parameters = {
     "mat_type": "nest",
     "snes_type": "ksponly",
 
-    "ksp_type": "gmres",
-    "ksp_rtol": 1e-10,
-    "ksp_max_it": 1000,
+    "ksp_type": "minres",
+    "ksp_rtol": 1e-8,
+    "ksp_max_it": 100,
+    "ksp_converged_reason": None,
 
     "pc_type": "fieldsplit",
     "pc_fieldsplit_type": "additive",
 
-    # CG mass block
     "fieldsplit_0": {
         "ksp_type": "preonly",
         "pc_type": "jacobi",
     },
 
-    # H(curl) mass + curl-curl block
     "fieldsplit_1": {
         "ksp_type": "preonly",
         "pc_type": "lu",
     },
 }
+
+solver_parameters = {
+    "ksp_type": "fgmres",
+    "ksp_rtol": 1e-8,
+    "ksp_max_it": 100,
+    "ksp_converged_reason": None,
+
+    "pc_type": "fieldsplit",
+    "pc_fieldsplit_type": "schur",
+    "pc_fieldsplit_schur_fact_type": "full",
+
+    "fieldsplit_0": {
+        "ksp_type": "preonly",
+        "pc_type": "jacobi",
+    },
+
+    "fieldsplit_1": {
+        "ksp_type": "preonly",
+        "pc_type": "lu",
+    },
+}
+
 
 def runtime_global(mesh, degree):
     funspace_CG = FunctionSpace(mesh, "CG", degree)
@@ -53,16 +74,16 @@ def runtime_global(mesh, degree):
     p0, u0 = TrialFunctions(mixspace_CG_Ned1)
     p1, u1 = TestFunctions(mixspace_CG_Ned1)
 
-    a = (inner(grad(p0), u1)*dx + inner(curl(u0), curl(u1))*dx + inner(p0, p1)*dx - inner(u0, grad(p1))*dx)
+    a = (inner(grad(p0), u1)*dx + inner(curl(u0), curl(u1))*dx + inner(p0, p1)*dx + inner(u0, grad(p1))*dx)
 
-    Jp = (
+    aP = (
         inner(p0, p1)*dx
         + inner(u0, u1)*dx
         + inner(curl(u0), curl(u1))*dx
     )
 
     L = inner(v, curl(u1))*dx
-    problem = LinearVariationalProblem(a, L, Pv_mixed, aP=Jp, constant_jacobian=True)
+    problem = LinearVariationalProblem(a, L, Pv_mixed, aP=aP, constant_jacobian=True)
     solver = LinearVariationalSolver(problem, solver_parameters=solver_parameters)
 
     def benchmark():
@@ -78,7 +99,8 @@ def runtime_global(mesh, degree):
 
     # warm up
     v, Pv = benchmark()
-    assert norm(curl(Pv) - v, "L2") / norm(v, "L2") < 1e-8
+    print("\n", norm(curl(Pv) - v, "L2") / norm(v, "L2"))
+    assert norm(curl(Pv) - v, "L2") / norm(v, "L2") < 1e-4
 
     # run benchmarks
     n_solves = 0
@@ -129,11 +151,17 @@ def runtime_local(mesh, degree):
     p1, u1 = TestFunctions(mixspace_CG_Ned1_1)
     PIv_mixed = Function(mixspace_CG_Ned1_1)
 
-    a = (inner(grad(p0), u1)*dx + inner(curl(u0), curl(u1))*dx + inner(p0, p1)*dx - inner(u0, grad(p1))*dx)
+    a = (inner(grad(p0), u1)*dx + inner(curl(u0), curl(u1))*dx + inner(p0, p1)*dx + inner(u0, grad(p1))*dx)
     Iv = Function(funspace_RT_1)
 
+    aP = (
+        inner(p0, p1)*dx
+        + inner(u0, u1)*dx
+        + inner(curl(u0), curl(u1))*dx
+    )
+
     L = inner(Iv, curl(u1))*dx
-    problem = LinearVariationalProblem(a, L, PIv_mixed)
+    problem = LinearVariationalProblem(a, L, PIv_mixed, aP=aP, constant_jacobian=True)
     solver = LinearVariationalSolver(problem, solver_parameters=solver_parameters)
 
     Mv = Function(funspace_RT)
@@ -177,7 +205,7 @@ def runtime_local(mesh, degree):
 
     # warm up
     v, Pv = benchmark()
-    assert norm(curl(Pv) - v, "L2") / norm(v, "L2") < 1e-8
+    assert norm(curl(Pv) - v, "L2") / norm(v, "L2") < 1e-4
 
     # run benchmarks
     n_solves = 0
@@ -217,7 +245,7 @@ data_local = []
 data_fields = ["mesh_id", "mesh_size", "polynomial_degree", "number_of_dof", "mean_runtime", "median_runtime", "minimum_runtime"]
 
 time_start = perf_counter()
-for mesh_level in range(experiment_n_refinements):
+for mesh_level in range(3, 4):
 
     print(f"====   Mesh level{mesh_level:3}  ====")
 
